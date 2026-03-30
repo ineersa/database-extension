@@ -16,7 +16,7 @@ use Mcp\Capability\Attribute\McpResourceTemplate;
 
 class ConnectionResource
 {
-    private const string DEFAULT_CONNECTION_NAME = 'default';
+    private const DEFAULT_CONNECTION_NAME = 'default';
 
     /**
      * @return array{uri: string, mimeType: string, text: string}

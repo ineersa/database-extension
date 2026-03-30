@@ -53,7 +53,6 @@ The problem it solves is that Symfony developers using Mate need AI assistants t
 ## Non-Goals (Out of Scope)
 
 - PII redaction support in v1.
-- SQL Server (`sqlsrv`) support in the initial automated integration matrix.
 - A shared reusable package extracted from the database logic.
 - Per-table, per-view, or per-routine resources in v1.
 - A custom non-Doctrine connection configuration path.
@@ -86,4 +85,3 @@ The problem it solves is that Symfony developers using Mate need AI assistants t
 - What exact DoctrineBundle version range can be supported safely alongside the DBAL 4-first implementation?
 - How should capability registration detect Doctrine availability most cleanly at container-build time?
 - How much of the standalone MCP test corpus can be ported directly without adding unnecessary maintenance burden?
-- When `sqlsrv` is reintroduced after v1, what extra test and compatibility work will be required?

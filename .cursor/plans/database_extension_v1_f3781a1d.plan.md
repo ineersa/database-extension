@@ -140,8 +140,3 @@ isProject: false
 - The package preserves the core database MCP behavior while fitting the Symfony AI Mate extension system and naming conventions.
 - The package ships quickly with the highest-value database features from your existing MCP.
 - The codebase stays extraction-friendly without paying the complexity cost of a new shared package yet.
-
-## Next Steps After V1
-
-- Add `sqlsrv` back into the automated integration matrix once the initial port is stable on the primary engines.
-- Revisit any SQL Server-specific read-only and metadata edge cases after the Mate-native implementation settles.

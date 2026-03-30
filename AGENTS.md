@@ -36,6 +36,7 @@ Help maintain clear documentation:
 ### Code Style Conventions
 - ✅ **No** `declare(strict_types=1)` - Omitted by design
 - ✅ **No** `final` classes - Allow extensibility
+- ✅ Target **PHP 8.2** syntax for all committed code (CI runs on 8.2 and 8.3)
 - ✅ All JSON encoding uses `\JSON_THROW_ON_ERROR | \JSON_PRETTY_PRINT`
 - ✅ File headers include MatesOfMate copyright
 
@@ -112,6 +113,7 @@ vendor/bin/phpunit tests/Capability/SpecificTest.php
 ### ❌ Don't
 - Don't add `declare(strict_types=1)` to PHP files
 - Don't make classes `final`
+- Don't use PHP 8.3+ syntax (for example typed class constants like `private const string FOO = 'bar';`)
 - Don't use `json_encode()` without error flags
 - Don't forget to register new capabilities in `config/config.php`
 - Don't skip tests
@@ -119,6 +121,7 @@ vendor/bin/phpunit tests/Capability/SpecificTest.php
 
 ### ✅ Do
 - Keep classes extensible (non-final)
+- Keep syntax compatible with PHP 8.2 in all source and test files
 - Use `\JSON_THROW_ON_ERROR | \JSON_PRETTY_PRINT` for JSON encoding
 - Write specific, actionable tool descriptions
 - Register all capabilities in service container

@@ -47,6 +47,7 @@
     },
     "scripts": {
         "test": "vendor/bin/phpunit",
+        "coverage": "XDEBUG_MODE=coverage vendor/bin/phpunit --coverage-text --coverage-html coverage/ --coverage-clover coverage/clover.xml",
         "lint": [
             "@composer validate --strict",
             "vendor/bin/rector process --dry-run",

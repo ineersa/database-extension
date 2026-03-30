@@ -18,9 +18,9 @@ use Mcp\Schema\Result\CallToolResult;
 
 class DatabaseQueryTool
 {
-    private const string DEFAULT_CONNECTION_NAME = 'default';
+    private const DEFAULT_CONNECTION_NAME = 'default';
 
-    private const string DESCRIPTION = <<<DESCRIPTION
+    private const DESCRIPTION = <<<DESCRIPTION
 Run read-only SQL queries for debugging and data inspection.
 Available connections: default plus any configured Doctrine DBAL named connections.
 If `connection` is omitted, the default Doctrine connection is used.
@@ -71,8 +71,8 @@ DESCRIPTION;
 
         if ($this->selectWithoutLimitOrWhere($normalizedQuery)) {
             return $this->errorResult(
-                'SELECT queries without WHERE require LIMIT or TOP.',
-                'Add LIMIT 10 (MySQL/PostgreSQL/SQLite) or TOP 10 (SQL Server), or add a WHERE clause.'
+                'SELECT queries without WHERE require LIMIT.',
+                'Add LIMIT 10 (or FETCH NEXT), or add a WHERE clause.'
             );
         }
 
@@ -124,7 +124,7 @@ DESCRIPTION;
             return false;
         }
 
-        if (str_contains($query, 'LIMIT ') || str_contains($query, 'TOP ') || str_contains($query, 'FETCH NEXT')) {
+        if (str_contains($query, 'LIMIT ') || str_contains($query, 'FETCH NEXT')) {
             return false;
         }
 

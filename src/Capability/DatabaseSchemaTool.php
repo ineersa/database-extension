@@ -18,19 +18,19 @@ use Mcp\Schema\Result\CallToolResult;
 
 class DatabaseSchemaTool
 {
-    private const string DEFAULT_CONNECTION_NAME = 'default';
+    private const DEFAULT_CONNECTION_NAME = 'default';
 
     /**
      * @var array<int, string>
      */
-    private const array VALID_DETAILS = ['summary', 'columns', 'full'];
+    private const VALID_DETAILS = ['summary', 'columns', 'full'];
 
     /**
      * @var array<int, string>
      */
-    private const array VALID_MATCH_MODES = ['contains', 'prefix', 'exact', 'glob'];
+    private const VALID_MATCH_MODES = ['contains', 'prefix', 'exact', 'glob'];
 
-    private const string DESCRIPTION = <<<DESCRIPTION
+    private const DESCRIPTION = <<<DESCRIPTION
 Inspect database schema objects in summary, columns, or full detail.
 Available connections: default plus any configured Doctrine DBAL named connections.
 If `connection` is omitted, the default Doctrine connection is used.
