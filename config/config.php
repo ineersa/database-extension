@@ -9,8 +9,8 @@
  * file that was distributed with this source code.
  */
 
-use MatesOfMate\ExampleExtension\Capability\ExampleResource;
-use MatesOfMate\ExampleExtension\Capability\ExampleTool;
+use MatesOfMate\DatabaseExtension\Capability\DatabaseResource;
+use MatesOfMate\DatabaseExtension\Capability\DatabaseTool;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 
 return static function (ContainerConfigurator $container): void {
@@ -20,12 +20,12 @@ return static function (ContainerConfigurator $container): void {
         ->autoconfigure();
 
     // Register your tools - automatically discovered by #[McpTool] attribute
-    $services->set(ExampleTool::class);
+    $services->set(DatabaseTool::class);
 
     // Register your resources - automatically discovered by #[McpResource] attribute
-    $services->set(ExampleResource::class);
+    $services->set(DatabaseResource::class);
 
-    // Example with constructor dependencies:
+    // Sample registration with constructor dependencies:
     // $services->set(YourTool::class)
     //     ->arg('$someParameter', '%some.parameter%');
 };

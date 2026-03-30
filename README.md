@@ -1,52 +1,55 @@
-# Extension Template for Symfony AI Mate
+# Database Extension for Symfony AI Mate
 
-A starter template for creating [MatesOfMate](https://github.com/matesofmate) extensions.
+[MatesOfMate](https://github.com/matesofmate) extension that adds MCP (Model Context Protocol) tools and resources for database-related workflows in Symfony AI Mate.
+
+Generic fork/customization instructions for new extensions live in [TEMPLATE.md](TEMPLATE.md) (copied from the original template).
 
 ## Quick Start
 
-1. **Use this template**: Click "Use this template" on GitHub
-2. **Rename everything**: Replace `example` with your framework name
-3. **Add your tools**: Create tools in `src/Capability/`
-4. **Test it**: Run `composer test`
-5. **Publish**: Submit to Packagist
+1. **Install**: `composer require --dev matesofmate/database-extension`
+2. **Discover tools**: `vendor/bin/mate discover`
+3. **Develop**: Add tools in `src/Capability/` and register them in `config/config.php`
+4. **Test**: `composer test`
+5. **Quality**: `composer lint`
 
 ## Structure
 
 ```
-extension-template/
+database-extension/
 ├── .github/
 │   ├── workflows/
 │   │   └── ci.yml             # GitHub Actions workflow
 │   ├── ISSUE_TEMPLATE/
-│   │   ├── 1-bug_report.md    # Bug report template
-│   │   ├── 2-feature_request.md # Feature request template
-│   │   └── config.yml         # Issue template configuration
-│   ├── CODEOWNERS             # Code ownership configuration
-│   └── PULL_REQUEST_TEMPLATE.md # PR template
-├── composer.json              # Package configuration
-├── README.md                  # This file (replace with your docs)
-├── LICENSE                    # MIT license
-├── .gitignore                 # Git ignore rules
-├── phpunit.xml.dist           # Test configuration
-├── phpstan.dist.neon          # PHPStan configuration
-├── rector.php                 # Rector configuration
-├── .php-cs-fixer.php          # PHP CS Fixer configuration
+│   │   ├── 1-bug_report.md
+│   │   ├── 2-feature_request.md
+│   │   └── config.yml
+│   ├── CODEOWNERS
+│   └── PULL_REQUEST_TEMPLATE.md
+├── composer.json
+├── README.md                  # This file
+├── TEMPLATE.md                # Generic extension template documentation
+├── LICENSE
+├── .gitignore
+├── phpunit.xml.dist
+├── phpstan.dist.neon
+├── rector.php
+├── .php-cs-fixer.php
 ├── src/
 │   └── Capability/
-│       ├── ExampleTool.php    # Sample tool implementation
-│       └── ExampleResource.php # Sample resource implementation
+│       ├── DatabaseTool.php    # Sample tool implementation
+│       └── DatabaseResource.php # Sample resource implementation
 ├── config/
-│   └── services.php           # Service registration
+│   └── config.php             # Service registration
 └── tests/
     └── Capability/
-        ├── ExampleToolTest.php
-        └── ExampleResourceTest.php
+        ├── DatabaseToolTest.php
+        └── DatabaseResourceTest.php
 ```
 
-## Installation (for users of your extension)
+## Installation
 
 ```bash
-composer require --dev matesofmate/your-extension
+composer require --dev matesofmate/database-extension
 
 # Discover the new tools
 vendor/bin/mate discover
@@ -59,7 +62,7 @@ Tools are PHP classes with methods marked with the `#[McpTool]` attribute:
 ```php
 <?php
 
-namespace MatesOfMate\ExampleExtension\Capability;
+namespace MatesOfMate\DatabaseExtension\Capability;
 
 use Mcp\Capability\Attribute\McpTool;
 
@@ -71,7 +74,7 @@ final class ListEntitiesTool
     }
 
     #[McpTool(
-        name: 'example-list-entities',
+        name: 'database-list-entities',
         description: 'Lists all entities in the application. Use when the user asks about available entities, models, or database tables.'
     )]
     public function execute(): string
@@ -88,10 +91,10 @@ final class ListEntitiesTool
 
 ### Tool Tips
 
-- **name**: Use `{framework}-{action}` format, lowercase with hyphens
-- **description**: Be specific! The AI uses this to decide when to call your tool
+- **name**: Use `{framework}-{action}` format, lowercase with hyphens (e.g. `database-…`)
+- **description**: Be specific so the model knows when to call the tool
 - **Return**: JSON strings work well for structured data
-- **Dependencies**: Use constructor injection, configure in `services.php`
+- **Dependencies**: Constructor injection; wire in `config/config.php`
 
 ## Creating Resources
 
@@ -100,21 +103,21 @@ Resources provide static context or configuration data to the AI. They return st
 ```php
 <?php
 
-namespace MatesOfMate\ExampleExtension\Capability;
+namespace MatesOfMate\DatabaseExtension\Capability;
 
 use Mcp\Capability\Attribute\McpResource;
 
 final class ConfigurationResource
 {
     #[McpResource(
-        uri: 'example://config',
-        name: 'example_config',
+        uri: 'database://config',
+        name: 'database_config',
         mimeType: 'application/json'
     )]
     public function getConfiguration(): array
     {
         return [
-            'uri' => 'example://config',
+            'uri' => 'database://config',
             'mimeType' => 'application/json',
             'text' => json_encode([
                 'version' => '1.0.0',
@@ -127,19 +130,19 @@ final class ConfigurationResource
 
 ### Resource Tips
 
-- **uri**: Use custom URI scheme (e.g., `example://config`, `myframework://routes`)
-- **name**: Descriptive name for the resource
+- **uri**: Custom scheme (e.g. `database://config`, `database://schema`)
+- **name**: Descriptive resource identifier
 - **mimeType**: Usually `application/json` or `text/plain`
 - **Return structure**: Must include `uri`, `mimeType`, and `text` keys
 
 ## Registering Services
 
-In `config/services.php`:
+In `config/config.php`:
 
 ```php
 <?php
 
-use MatesOfMate\ExampleExtension\Capability\ListEntitiesTool;
+use MatesOfMate\DatabaseExtension\Capability\ListEntitiesTool;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 
 return static function (ContainerConfigurator $container): void {
@@ -185,35 +188,29 @@ vendor/bin/rector process
 
 ### Continuous Integration
 
-The template includes a GitHub Actions workflow that automatically runs on every push and pull request:
+GitHub Actions runs on push and pull request:
 
-- **Lint job**: Validates composer.json, runs Rector, PHP CS Fixer, and PHPStan
-- **Test job**: Runs PHPUnit tests on PHP 8.2 and 8.3
+- **Lint job**: Validates `composer.json`, Rector, PHP CS Fixer, PHPStan
+- **Test job**: PHPUnit on PHP 8.2 and 8.3
 
-The workflow is configured in `.github/workflows/ci.yml`.
+Configured in `.github/workflows/ci.yml`.
 
 ### GitHub Templates
 
-The template includes GitHub configuration files to streamline your development workflow:
-
-- **CODEOWNERS**: Define code ownership for automatic review requests (update with your GitHub username)
-- **PULL_REQUEST_TEMPLATE.md**: Standardized PR description format
-- **Issue Templates**: Bug reports and feature requests with structured formats
-- **config.yml**: Links to documentation and community resources
-
-Remember to update CODEOWNERS with your actual GitHub username or team names.
+- **CODEOWNERS**: Code ownership (update with your GitHub username)
+- **PULL_REQUEST_TEMPLATE.md**: PR format
+- **Issue templates**: Bug reports and feature requests
 
 ## Checklist Before Publishing
 
-- [ ] Replace all `example`/`Example` references with your framework name
-- [ ] Update `composer.json` with correct package name and description
-- [ ] Update `.github/CODEOWNERS` with your GitHub username/team
+- [x] Replace template `example` / `ExampleExtension` naming with `database` / `DatabaseExtension`
+- [ ] Keep `composer.json` package name and description accurate as features grow
+- [ ] Update `.github/CODEOWNERS` with maintainers
 - [ ] Write meaningful tool descriptions
-- [ ] Add installation instructions to README
-- [ ] Add tests for your tools
-- [ ] Update LICENSE with your name/org
-- [ ] Tag a release (e.g., `v0.1.0`)
-- [ ] Submit to Packagist
+- [ ] Keep installation and usage documented in this README
+- [ ] Add tests for new tools and resources
+- [ ] Update LICENSE name/org if needed
+- [ ] Tag releases (e.g. `v0.1.0`) and publish to Packagist
 
 ## Resources
 

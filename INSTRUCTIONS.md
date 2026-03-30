@@ -1,4 +1,4 @@
-## Example Extension
+## Database Extension
 
 Use MCP tools instead of CLI:
 

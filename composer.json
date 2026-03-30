@@ -1,6 +1,6 @@
 {
-    "name": "matesofmate/example-extension",
-    "description": "Example extension for Symfony AI Mate - replace with your description",
+    "name": "matesofmate/database-extension",
+    "description": "Database extension for Symfony AI Mate — MCP tools and resources for database workflows",
     "type": "symfony-ai-mate",
     "license": "MIT",
     "keywords": ["symfony", "ai", "mate", "mcp", "ai-assistant"],
@@ -24,12 +24,12 @@
     },
     "autoload": {
         "psr-4": {
-            "MatesOfMate\\ExampleExtension\\": "src/"
+            "MatesOfMate\\DatabaseExtension\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "MatesOfMate\\ExampleExtension\\Tests\\": "tests/"
+            "MatesOfMate\\DatabaseExtension\\Tests\\": "tests/"
         }
     },
     "extra": {

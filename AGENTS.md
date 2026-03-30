@@ -1,25 +1,21 @@
 # AGENTS.md
 
-Guidelines for AI agents helping users create Symfony AI Mate extensions from this template.
+Guidelines for AI agents working on the Database extension for Symfony AI Mate.
 
 ## Agent Role
 
-When assisting with this repository, you are helping developers **create new MCP extensions** for their frameworks, CMSs, or tools. This is a template repository - users will customize it for their needs.
+When assisting with this repository, you are helping maintain and extend an **MCP extension** that provides database-oriented tools and resources for AI assistants.
 
 ## Key Responsibilities
 
-### 1. Guide Template Customization
-Help users replace placeholder content:
-- Replace `Example`/`ExampleExtension` with their framework name
-- Update `composer.json` package name to `matesofmate/{framework}-extension`
-- Update namespace from `MatesOfMate\ExampleExtension\` to `MatesOfMate\{Framework}Extension\`
-- Replace `@your-username` in CODEOWNERS with actual GitHub username
+### 1. Package Identity
+This package is `matesofmate/database-extension` with namespace `MatesOfMate\DatabaseExtension\`. New capabilities belong under `src/Capability/` with `database-` tool name prefixes and `database://` URI schemes where appropriate.
 
 ### 2. Tool/Resource Development
 Assist with creating MCP capabilities:
 - Tools: Executable actions marked with `#[McpTool]`
 - Resources: Static context data marked with `#[McpResource]`
-- Service registration in `config/services.php`
+- Service registration in `config/config.php`
 - Comprehensive tests in `tests/Capability/`
 
 ### 3. Quality Assurance
@@ -48,7 +44,7 @@ When creating new tools:
 - [ ] Clear, descriptive `#[McpTool]` name: `{framework}-{action}`
 - [ ] Helpful description explaining when AI should use it
 - [ ] Returns JSON string for structured data
-- [ ] Registered in `config/services.php`
+- [ ] Registered in `config/config.php`
 - [ ] Has corresponding test in `tests/Capability/`
 - [ ] Test validates JSON output structure
 
@@ -58,24 +54,22 @@ When creating new resources:
 - [ ] Descriptive name: `{framework}_{name}`
 - [ ] Returns array with `uri`, `mimeType`, `text` keys
 - [ ] `text` value is JSON string (for JSON mimeType)
-- [ ] Registered in `config/services.php`
+- [ ] Registered in `config/config.php`
 - [ ] Has corresponding test validating structure
 
 ## Workflow Guidelines
 
-### When User Starts New Extension
-1. Confirm framework/CMS they're building for
-2. Help search/replace all `Example` references
-3. Update `composer.json` with correct package name
-4. Guide CODEOWNERS update
-5. Ensure tests pass: `composer test && composer lint`
+### When Scoping New Work
+1. Align tool names and URIs with the `database-` / `database://` conventions
+2. Register new services in `config/config.php`
+3. Ensure tests pass: `composer test && composer lint`
 
 ### When Adding New Tools
 1. Discuss tool purpose and when AI should use it
 2. Create class in `src/Capability/`
 3. Add `#[McpTool]` attribute with clear description
 4. Implement method returning JSON
-5. Register in `config/services.php`
+5. Register in `config/config.php`
 6. Create test validating behavior
 7. Run quality checks
 
@@ -84,7 +78,7 @@ When creating new resources:
 2. Create class in `src/Capability/`
 3. Add `#[McpResource]` attribute with URI and name
 4. Implement method returning proper structure
-5. Register in `config/services.php`
+5. Register in `config/config.php`
 6. Create test validating return structure
 7. Run quality checks
 
@@ -119,7 +113,7 @@ vendor/bin/phpunit tests/Capability/SpecificTest.php
 - Don't add `declare(strict_types=1)` to PHP files
 - Don't make classes `final`
 - Don't use `json_encode()` without error flags
-- Don't forget to register new capabilities in `config/services.php`
+- Don't forget to register new capabilities in `config/config.php`
 - Don't skip tests
 - Don't use generic tool descriptions like "A tool for doing things"
 
@@ -140,9 +134,8 @@ vendor/bin/phpunit tests/Capability/SpecificTest.php
 
 ## Before Publishing Checklist
 
-Help users verify before publishing their extension:
-- [ ] All `Example`/`ExampleExtension` references replaced
-- [ ] `composer.json` has correct package name
+Help maintainers verify before publishing:
+- [ ] `composer.json` package name remains `matesofmate/database-extension` (or updated intentionally)
 - [ ] CODEOWNERS updated with real GitHub username
 - [ ] README.md has framework-specific documentation
 - [ ] All tools have clear descriptions
@@ -192,7 +185,7 @@ Improve tool error handling
 
 ### Bad Examples
 ```
-Update ExampleTool.php
+Update DatabaseTool.php
 
 Co-Authored-By: Claude Code <noreply@anthropic.com>
 ```

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Template repository for creating Symfony AI Mate extensions providing MCP (Model Context Protocol) tools and resources to AI assistants. This template serves as the foundation for all MatesOfMate extensions, demonstrating the standard structure, patterns, and quality standards.
+Symfony AI Mate extension providing MCP (Model Context Protocol) tools and resources for database-related workflows. Package: `matesofmate/database-extension`, namespace `MatesOfMate\DatabaseExtension\`. See [TEMPLATE.md](TEMPLATE.md) for generic extension scaffolding notes.
 
 ## Common Commands
 
@@ -18,7 +18,7 @@ composer install
 composer test
 
 # Run specific test
-vendor/bin/phpunit tests/Capability/ExampleToolTest.php
+vendor/bin/phpunit tests/Capability/DatabaseToolTest.php
 vendor/bin/phpunit --filter testMethodName
 
 # Check code quality (validates composer.json, runs Rector, PHP CS Fixer, PHPStan)
@@ -48,10 +48,10 @@ vendor/bin/rector process                     # Apply changes
 ### Component Structure
 
 **MCP Tools** (`src/Capability/`):
-- `ExampleTool` - Example tool demonstrating MCP tool pattern with JSON output
+- `DatabaseTool` - Sample tool demonstrating MCP tool pattern with JSON output
 
 **MCP Resources** (`src/Capability/`):
-- `ExampleResource` - Example resource demonstrating MCP resource pattern with structured data
+- `DatabaseResource` - Sample resource demonstrating MCP resource pattern with structured data
 
 **Core Services**:
 - Extensions will add domain-specific services (runners, parsers, formatters, etc.)
@@ -62,11 +62,11 @@ vendor/bin/rector process                     # Apply changes
 
 ### Service Registration
 
-All services registered in `config/services.php` with:
+All services registered in `config/config.php` with:
 - Autowiring enabled
 - Autoconfiguration enabled (discovers #[McpTool] and #[McpResource] attributes)
 
-Example registration:
+Sample registration:
 ```php
 $services = $container->services()
     ->defaults()
@@ -146,7 +146,7 @@ Symfony AI Mate auto-discovers tools and resources via `composer.json`:
     "extra": {
         "ai-mate": {
             "scan-dirs": ["src/Capability"],
-            "includes": ["config/services.php"]
+            "includes": ["config/config.php"]
         }
     }
 }
@@ -177,7 +177,7 @@ Symfony AI Mate auto-discovers tools and resources via `composer.json`:
 1. Create tool class in `src/Capability/` with `#[McpTool]` attribute
 2. Use naming convention: `{framework}-{action}` (lowercase with hyphens)
 3. Inject required services via constructor
-4. Register service in `config/services.php`
+4. Register service in `config/config.php`
 5. Add corresponding test in `tests/Capability/`
 
 **Tool Implementation Pattern**:
@@ -204,7 +204,7 @@ class YourTool
 ```
 
 **Key points**:
-- Tool names use lowercase with hyphens: `example-list-entities`
+- Tool names use lowercase with hyphens: `database-list-entities`
 - Descriptions are critical - AI uses them to decide when to invoke tools
 - Return JSON strings for structured data
 - Use constructor injection for dependencies
@@ -212,9 +212,9 @@ class YourTool
 ### Adding New Resources
 
 1. Create resource class in `src/Capability/` with `#[McpResource]` attribute
-2. Use custom URI scheme (e.g., `example://`, `symfony://`)
+2. Use custom URI scheme (e.g., `database://`, `symfony://`)
 3. Return array with `uri`, `mimeType`, and `text` keys
-4. Register service in `config/services.php`
+4. Register service in `config/config.php`
 5. Add corresponding test in `tests/Capability/`
 
 **Resource Implementation Pattern**:
@@ -244,17 +244,15 @@ class YourResource
 - URI uses custom scheme matching your framework
 - Typically return `application/json` or `text/plain`
 
-### When Creating New Extensions
+### When Adding Capabilities
 
-1. Replace all `example`/`Example`/`ExampleExtension` references with your framework name
-2. Update `composer.json` package name to `matesofmate/{framework}-extension`
-3. Update `.github/CODEOWNERS` - replace `@your-username` with your GitHub handle (keep `@wachterjohannes`)
-4. Create tools and resources in `src/Capability/` with clear, descriptive names
-5. Register all services in `config/services.php`
-6. Write comprehensive tests in `tests/Capability/`
-7. Update README.md with framework-specific documentation
-8. Ensure all quality checks pass: `composer lint && composer test`
-9. Tag release (e.g., `v0.1.0`) and submit to Packagist
+1. Add tools and resources in `src/Capability/` with clear names (`database-{action}`, `database://…`)
+2. Register all services in `config/config.php`
+3. Write tests in `tests/Capability/`
+4. Update README.md when behavior or installation changes
+5. Ensure all quality checks pass: `composer lint && composer test`
+
+Forking as a new extension type: start from [TEMPLATE.md](TEMPLATE.md), replace `database` naming with your framework, and update `composer.json` / namespaces accordingly.
 
 ## Commit Message Convention
 
