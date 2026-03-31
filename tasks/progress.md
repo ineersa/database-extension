@@ -1,6 +1,6 @@
 # Database Extension V1 Progress
 
-Last updated: 2026-03-30
+Last updated: 2026-03-31
 
 ## Current Status
 
@@ -10,6 +10,10 @@ Last updated: 2026-03-30
 - Subtasks `2.1` through `2.5` are complete and checked in `tasks/tasks-database-extension-v1.md`.
 - Task `3.0 Integrate DoctrineBundle connection resolution and conditional capability registration` is complete.
 - Subtasks `3.1` through `3.5` are complete and checked in `tasks/tasks-database-extension-v1.md`.
+- Task `4.0 Build the Docker-backed Symfony test harness and port the automated tests` is complete.
+- Subtasks `4.1` through `4.7` are complete and checked in `tasks/tasks-database-extension-v1.md`.
+- Task `5.0 Update package dependencies, CI, and test tooling for the new extension architecture` is in progress.
+- Subtasks `5.1` and `5.2` are complete and checked in `tasks/tasks-database-extension-v1.md`.
 
 ## What Was Completed
 
@@ -74,6 +78,69 @@ Last updated: 2026-03-30
   - `tests/Capability/DatabaseSchemaToolTest.php` (updated)
   - `tests/Capability/ConnectionResourceTest.php` (updated)
 
+## Task 4 Completed Work
+
+- Added Symfony integration-test kernels and fixtures:
+  - `tests/Fixtures/App/TestKernel.php`
+    - Boots `FrameworkBundle` + `DoctrineBundle`.
+    - Imports package `config/config.php` for real extension wiring.
+    - Configures DBAL connections for SQLite (default), MySQL, and PostgreSQL.
+  - `tests/Fixtures/App/NoDoctrineKernel.php`
+    - Boots `FrameworkBundle` only.
+    - Imports package `config/config.php` to verify capability non-exposure without Doctrine bundle wiring.
+  - `tests/Fixtures/Database/DatabaseTestFixtures.php`
+    - Cross-database fixture reset utility for users table + active_users view.
+- Added integration coverage for real container wiring and runtime behavior:
+  - `tests/Integration/DoctrineIntegrationTest.php`
+    - Verifies capability service exposure with Doctrine enabled.
+    - Verifies default connection fallback in `database-query`.
+    - Verifies structured tool error behavior for unknown connections.
+    - Verifies read-only enforcement against live connections.
+    - Verifies schema extraction and `db://{connection}` resource payload shape against real DBAL schema manager.
+  - `tests/Integration/NoDoctrineKernelTest.php`
+    - Verifies database capabilities are not exposed when Doctrine bundle integration is absent.
+- Expanded unit coverage for service-layer validation and execution behavior:
+  - `tests/Unit/SafeQueryExecutorTest.php` (extended)
+    - Added multiple-statement rejection assertions.
+    - Added multi-row truncation and single-row preservation assertions for long text values.
+  - `tests/Unit/DatabaseSchemaServiceTest.php` (new)
+    - Added detail/match-mode validation assertions.
+    - Added SQLite summary extraction assertion.
+- Updated package config guard to use container-level Doctrine service-layer detection:
+  - `config/config.php`
+  - Database capabilities now register only when Doctrine integration is actually present in the container context.
+
+## Docker Test Harness
+
+- Added Docker matrix infrastructure and scripts:
+  - `Dockerfile.test`
+  - `docker-compose.test.yaml`
+  - `tests/bin/run-container-phpunit.sh`
+  - `tests/bin/run-docker-phpunit.sh`
+- The Docker-backed test command runs both variants:
+  - PHP 8.2 + Symfony `^7.3`
+  - PHP 8.4 + Symfony `^8.0`
+- Added composer script:
+  - `composer test:docker`
+- Updated composer test and quality scripts for PHP 8.2 container-first workflow:
+  - `composer test` now runs the full suite in Docker on PHP 8.2 + Symfony `^7.3`.
+  - `composer lint` now runs both local linting and a PHP 8.2 Docker lint pass.
+  - `composer fix` now runs local fixers and also executes a PHP 8.2 Docker fixer pass.
+  - `composer coverage` now runs in the PHP 8.2 Docker container with Xdebug and writes reports to host `coverage/`.
+  - Added helper scripts:
+    - `tests/bin/run-docker-coverage.sh`
+    - `tests/bin/run-docker-quality.sh`
+  - Added local-only convenience scripts:
+    - `composer test:local`
+    - `composer coverage:local`
+    - `composer lint:local`
+    - `composer fix:local`
+    - `composer lint:php82`
+    - `composer fix:php82`
+- Updated `Dockerfile.test` to install and enable Xdebug for Docker coverage collection.
+- Added ignore rule for generated app-only config reference file:
+  - `.gitignore` now includes `config/reference.php`.
+
 ## Scope Guardrails Applied
 
 - Standalone-server-only pieces were not ported in Task 2:
@@ -90,3 +157,5 @@ Last updated: 2026-03-30
 
 - `composer test` passes.
 - `composer lint` passes.
+- `composer coverage` passes and writes reports to `coverage/`.
+- `bash tests/bin/run-docker-phpunit.sh matrix` passes (PHP 8.2/Symfony ^7.3 and PHP 8.4/Symfony ^8.0 matrix).

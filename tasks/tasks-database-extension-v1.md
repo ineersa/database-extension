@@ -60,17 +60,17 @@ Update the file after completing each sub-task, not just after completing an ent
   - [x] 3.3 Rebuild or wrap resolved connections through the read-only driver path before query or schema work is executed.
   - [x] 3.4 Update `config/config.php` to register the new services and capability classes with autowiring/autoconfiguration.
   - [x] 3.5 Make capability exposure conditional on Doctrine service availability while still allowing broken concrete connections to surface runtime errors for debugging.
-- [ ] 4.0 Build the Docker-backed Symfony test harness and port the automated tests
-  - [ ] 4.1 Create a minimal Symfony test kernel with `FrameworkBundle` and `DoctrineBundle` for integration tests.
-  - [ ] 4.2 Add a no-Doctrine test kernel or equivalent fixture setup to verify that capabilities are not exposed when Doctrine services are absent.
-  - [ ] 4.3 Add Docker Compose test infrastructure for the initial supported databases: MySQL, PostgreSQL, and SQLite-backed test execution.
-  - [ ] 4.4 Port or adapt unit tests for safe query execution, schema validation, and connection resolution.
-  - [ ] 4.5 Add capability-level tests covering default connection fallback, structured success/error behavior, and resource payloads.
-  - [ ] 4.6 Add integration tests that boot the real test container and verify read-only enforcement, schema extraction, and actual extension wiring.
-  - [ ] 4.7 Ensure the full PHPUnit suite runs through one Docker-backed command.
+- [x] 4.0 Build the Docker-backed Symfony test harness and port the automated tests
+  - [x] 4.1 Create a minimal Symfony test kernel with `FrameworkBundle` and `DoctrineBundle` for integration tests.
+  - [x] 4.2 Add a no-Doctrine test kernel or equivalent fixture setup to verify that capabilities are not exposed when Doctrine services are absent.
+  - [x] 4.3 Add Docker Compose test infrastructure for the initial supported databases: MySQL, PostgreSQL, and SQLite-backed test execution, PHP 8.2.
+  - [x] 4.4 Port or adapt unit tests for safe query execution, schema validation, and connection resolution.
+  - [x] 4.5 Add capability-level tests covering default connection fallback, structured success/error behavior, and resource payloads.
+  - [x] 4.6 Add integration tests that boot the real test container and verify read-only enforcement, schema extraction, and actual extension wiring.
+  - [x] 4.7 Ensure the full PHPUnit suite runs through one Docker-backed command.
 - [ ] 5.0 Update package dependencies, CI, and test tooling for the new extension architecture
-  - [ ] 5.1 Update `composer.json` with DoctrineBundle and any required DBAL or testing dependencies for the v1 architecture.
-  - [ ] 5.2 Add or update test scripts so local and CI execution both use the Docker-backed PHPUnit flow.
+  - [x] 5.1 Update `composer.json` with DoctrineBundle and any required DBAL or testing dependencies for the v1 architecture.
+  - [x] 5.2 Add or update test scripts so local and CI execution both use the Docker-backed PHPUnit flow.
   - [ ] 5.3 Update `.github/workflows/ci.yml` to boot the Docker test stack and run the full PHPUnit suite.
   - [ ] 5.4 Verify that the planned dependency ranges remain aligned with the DBAL 4-first implementation target.
 - [ ] 6.0 Rewrite developer-facing documentation and Mate instructions for the final v1 behavior

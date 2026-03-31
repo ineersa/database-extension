@@ -1,0 +1,14 @@
+ARG PHP_VERSION=8.2
+FROM php:${PHP_VERSION}-cli
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends git unzip libpq-dev libsqlite3-dev \
+    && docker-php-ext-install pdo_mysql pdo_pgsql pdo_sqlite \
+    && pecl install xdebug \
+    && docker-php-ext-enable xdebug \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+ENV COMPOSER_ALLOW_SUPERUSER=1
+WORKDIR /app

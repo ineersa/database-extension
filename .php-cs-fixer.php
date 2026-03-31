@@ -63,5 +63,6 @@ return (new PhpCsFixer\Config())
         (new PhpCsFixer\Finder())
             ->in(__DIR__)
             ->exclude(['var', 'vendor'])
+            ->notPath('config/reference.php')
     )
 ;

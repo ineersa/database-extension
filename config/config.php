@@ -20,11 +20,12 @@ use MatesOfMate\DatabaseExtension\Service\Schema\MysqlSchemaInspector;
 use MatesOfMate\DatabaseExtension\Service\Schema\PostgreSqlSchemaInspector;
 use MatesOfMate\DatabaseExtension\Service\Schema\SchemaInspectorFactory;
 use MatesOfMate\DatabaseExtension\Service\Schema\SqliteSchemaInspector;
+use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 
 use function Symfony\Component\DependencyInjection\Loader\Configurator\service;
 
-return static function (ContainerConfigurator $container): void {
+return static function (ContainerConfigurator $container, ContainerBuilder $containerBuilder): void {
     $services = $container->services()
         ->defaults()
         ->autowire()
@@ -39,11 +40,12 @@ return static function (ContainerConfigurator $container): void {
     $services->set(SchemaInspectorFactory::class);
     $services->set(DatabaseSchemaService::class);
 
-    $doctrineBundleAvailable = class_exists('Doctrine\\Bundle\\DoctrineBundle\\DoctrineBundle')
-        || class_exists('Doctrine\\Bundle\\DoctrineBundle\\Registry')
-        || interface_exists('Doctrine\\Persistence\\ManagerRegistry');
+    $doctrineServiceLayerAvailable = $containerBuilder->hasExtension('doctrine')
+        || $containerBuilder->hasDefinition('doctrine')
+        || $containerBuilder->hasDefinition('doctrine.dbal.default_connection')
+        || $containerBuilder->hasParameter('doctrine.connections');
 
-    if (!$doctrineBundleAvailable) {
+    if (!$doctrineServiceLayerAvailable) {
         return;
     }
 

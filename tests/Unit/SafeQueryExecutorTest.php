@@ -11,6 +11,9 @@
 
 namespace MatesOfMate\DatabaseExtension\Tests\Unit;
 
+use Doctrine\DBAL\Configuration;
+use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\DriverManager;
 use MatesOfMate\DatabaseExtension\Exception\ToolUsageError;
 use MatesOfMate\DatabaseExtension\Service\SafeQueryExecutor;
 use PHPUnit\Framework\TestCase;
@@ -72,5 +75,57 @@ class SafeQueryExecutorTest extends TestCase
         $executor->validateReadOnlyQuery('SELECT COUNT(*) FROM users');
 
         $this->addToAssertionCount(1);
+    }
+
+    public function testRejectsMultipleStatements(): void
+    {
+        $executor = new SafeQueryExecutor();
+
+        try {
+            $executor->validateReadOnlyQuery('SELECT id FROM users LIMIT 1; SELECT id FROM users LIMIT 1;');
+            $this->fail('Expected ToolUsageError was not thrown.');
+        } catch (ToolUsageError $error) {
+            $this->assertSame('Only one SQL statement is allowed per call.', $error->getMessage());
+            $this->assertSame('Split multi-statement requests into separate database-query calls.', $error->getHint());
+        }
+    }
+
+    public function testExecuteTruncatesLongTextWhenMultipleRowsAreReturned(): void
+    {
+        $connection = $this->createSqliteConnection();
+        $connection->executeStatement('CREATE TABLE notes (id INTEGER PRIMARY KEY, body TEXT NOT NULL)');
+
+        $connection->insert('notes', ['id' => 1, 'body' => str_repeat('a', 240)]);
+        $connection->insert('notes', ['id' => 2, 'body' => str_repeat('b', 240)]);
+
+        $executor = new SafeQueryExecutor();
+        $rows = $executor->execute($connection, 'SELECT id, body FROM notes ORDER BY id LIMIT 10');
+
+        $this->assertCount(2, $rows);
+        $this->assertSame('<TEXT>', $rows[0]['body']);
+        $this->assertSame('<TEXT>', $rows[1]['body']);
+    }
+
+    public function testExecuteKeepsLongTextForSingleRowResult(): void
+    {
+        $connection = $this->createSqliteConnection();
+        $connection->executeStatement('CREATE TABLE notes (id INTEGER PRIMARY KEY, body TEXT NOT NULL)');
+
+        $longText = str_repeat('a', 240);
+        $connection->insert('notes', ['id' => 1, 'body' => $longText]);
+
+        $executor = new SafeQueryExecutor();
+        $rows = $executor->execute($connection, 'SELECT id, body FROM notes WHERE id = 1');
+
+        $this->assertCount(1, $rows);
+        $this->assertSame($longText, $rows[0]['body']);
+    }
+
+    private function createSqliteConnection(): Connection
+    {
+        return DriverManager::getConnection([
+            'driver' => 'pdo_sqlite',
+            'memory' => true,
+        ], new Configuration());
     }
 }

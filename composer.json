@@ -1,69 +1,90 @@
 {
-    "name": "matesofmate/database-extension",
-    "description": "Database extension for Symfony AI Mate — MCP tools and resources for database workflows",
-    "type": "symfony-ai-mate",
-    "license": "MIT",
-    "keywords": ["symfony", "ai", "mate", "mcp", "ai-assistant"],
-    "authors": [
-        {
-            "name": "Your Name",
-            "email": "your@email.com"
-        }
-    ],
-    "require": {
-        "php": ">=8.2",
-        "ext-simplexml": "*",
-        "doctrine/dbal": "^4.0",
-        "helgesverre/toon": "^3.0",
-        "symfony/ai-mate": "^0.3 || ^0.4 || ^0.5 || ^0.6@dev"
-    },
-    "require-dev": {
-        "phpunit/phpunit": "^10.0",
-        "friendsofphp/php-cs-fixer": "^3.0",
-        "phpstan/phpstan": "^2.0",
-        "phpstan/phpstan-phpunit": "^2.0",
-        "rector/rector": "^2.0"
-    },
-    "autoload": {
-        "psr-4": {
-            "MatesOfMate\\DatabaseExtension\\": "src/"
-        }
-    },
-    "autoload-dev": {
-        "psr-4": {
-            "MatesOfMate\\DatabaseExtension\\Tests\\": "tests/"
-        }
-    },
-    "extra": {
-        "ai-mate": {
-            "scan-dirs": [
-                "src/Capability"
-            ],
-            "includes": ["config/config.php"],
-            "instructions": "INSTRUCTIONS.md"
-        },
-        "branch-alias": {
-            "dev-main": "0.2.x-dev"
-        }
-    },
-    "scripts": {
-        "test": "vendor/bin/phpunit",
-        "coverage": "XDEBUG_MODE=coverage vendor/bin/phpunit --coverage-text --coverage-html coverage/ --coverage-clover coverage/clover.xml",
-        "lint": [
-            "@composer validate --strict",
-            "vendor/bin/rector process --dry-run",
-            "vendor/bin/php-cs-fixer fix --dry-run --diff",
-            "vendor/bin/phpstan analyse"
-        ],
-        "fix": [
-            "vendor/bin/rector process",
-            "vendor/bin/php-cs-fixer fix"
-        ]
-    },
-    "config": {
-        "sort-packages": true,
-        "allow-plugins": {
-            "php-http/discovery": true
-        }
+  "name": "matesofmate/database-extension",
+  "description": "Database extension for Symfony AI Mate — MCP tools and resources for database workflows",
+  "type": "symfony-ai-mate",
+  "license": "MIT",
+  "keywords": [
+    "symfony",
+    "ai",
+    "mate",
+    "mcp",
+    "ai-assistant"
+  ],
+  "authors": [
+    {
+      "name": "Your Name",
+      "email": "your@email.com"
     }
+  ],
+  "require": {
+    "php": ">=8.2",
+    "ext-simplexml": "*",
+    "doctrine/dbal": "^4.0",
+    "helgesverre/toon": "^3.0",
+    "symfony/ai-mate": "^0.3 || ^0.4 || ^0.5 || ^0.6@dev"
+  },
+  "require-dev": {
+    "doctrine/doctrine-bundle": "^2.14",
+    "friendsofphp/php-cs-fixer": "^3.0",
+    "phpstan/phpstan": "^2.0",
+    "phpstan/phpstan-phpunit": "^2.0",
+    "phpunit/phpunit": "^10.0",
+    "rector/rector": "^2.0",
+    "symfony/framework-bundle": "^7.3 || ^8.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "MatesOfMate\\DatabaseExtension\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "MatesOfMate\\DatabaseExtension\\Tests\\": "tests/"
+    }
+  },
+  "extra": {
+    "ai-mate": {
+      "scan-dirs": [
+        "src/Capability"
+      ],
+      "includes": [
+        "config/config.php"
+      ],
+      "instructions": "INSTRUCTIONS.md"
+    },
+    "branch-alias": {
+      "dev-main": "0.2.x-dev"
+    }
+  },
+  "scripts": {
+    "test": "bash tests/bin/run-docker-phpunit.sh php82",
+    "test:local": "vendor/bin/phpunit",
+    "test:docker": "bash tests/bin/run-docker-phpunit.sh matrix",
+    "coverage": "bash tests/bin/run-docker-coverage.sh",
+    "coverage:local": "XDEBUG_MODE=coverage vendor/bin/phpunit --coverage-text --coverage-html coverage/ --coverage-clover coverage/clover.xml",
+    "lint:local": [
+      "@composer validate --strict",
+      "vendor/bin/rector process --dry-run",
+      "vendor/bin/php-cs-fixer fix --dry-run --diff",
+      "vendor/bin/phpstan analyse --memory-limit=512M"
+    ],
+    "lint:php82": "bash tests/bin/run-docker-quality.sh lint",
+    "lint": [
+      "@lint:php82"
+    ],
+    "fix:local": [
+      "vendor/bin/rector process",
+      "vendor/bin/php-cs-fixer fix"
+    ],
+    "fix:php82": "bash tests/bin/run-docker-quality.sh fix",
+    "fix": [
+      "@fix:php82"
+    ]
+  },
+  "config": {
+    "sort-packages": true,
+    "allow-plugins": {
+      "php-http/discovery": true
+    }
+  }
 }
