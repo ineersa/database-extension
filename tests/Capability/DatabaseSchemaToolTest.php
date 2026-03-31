@@ -11,7 +11,10 @@
 
 namespace MatesOfMate\DatabaseExtension\Tests\Capability;
 
+use Doctrine\DBAL\Connection;
 use MatesOfMate\DatabaseExtension\Capability\DatabaseSchemaTool;
+use MatesOfMate\DatabaseExtension\Service\ConnectionResolver;
+use MatesOfMate\DatabaseExtension\Service\DatabaseSchemaService;
 use Mcp\Capability\Attribute\McpTool;
 use Mcp\Schema\Content\TextContent;
 use PHPUnit\Framework\TestCase;
@@ -32,7 +35,48 @@ class DatabaseSchemaToolTest extends TestCase
 
     public function testReturnsSummaryPayloadWithDefaultConnectionFallback(): void
     {
-        $tool = new DatabaseSchemaTool();
+        $connection = $this->createMock(Connection::class);
+
+        $databaseSchemaService = $this->createMock(DatabaseSchemaService::class);
+        $databaseSchemaService
+            ->expects($this->once())
+            ->method('getSchemaStructure')
+            ->with(
+                'default',
+                $connection,
+                'sqlite',
+                '',
+                'summary',
+                'contains',
+                false,
+                false,
+            )
+            ->willReturn([
+                'connection' => 'default',
+                'engine' => 'sqlite',
+                'detail' => 'summary',
+                'match_mode' => 'contains',
+                'tables' => ['users'],
+            ]);
+
+        $connectionResolver = $this->createMock(ConnectionResolver::class);
+        $connectionResolver
+            ->expects($this->once())
+            ->method('resolve')
+            ->with(null)
+            ->willReturn([
+                'name' => 'default',
+                'default_name' => 'default',
+                'default_used' => true,
+                'metadata' => [
+                    'driver' => 'pdo_sqlite',
+                    'platform' => 'sqlite',
+                    'server_version' => null,
+                ],
+                'connection' => $connection,
+            ]);
+
+        $tool = new DatabaseSchemaTool($databaseSchemaService, $connectionResolver);
 
         $result = $tool->execute();
 
@@ -46,11 +90,23 @@ class DatabaseSchemaToolTest extends TestCase
 
         $this->assertStringContainsString('connection: default', $payload);
         $this->assertStringContainsString('detail: summary', $payload);
+        $this->assertStringNotContainsString('default_connection:', $payload);
+        $this->assertStringNotContainsString('available_connections', $payload);
     }
 
     public function testReturnsStructuredErrorForInvalidDetail(): void
     {
-        $tool = new DatabaseSchemaTool();
+        $databaseSchemaService = $this->createMock(DatabaseSchemaService::class);
+        $databaseSchemaService
+            ->expects($this->never())
+            ->method('getSchemaStructure');
+
+        $connectionResolver = $this->createMock(ConnectionResolver::class);
+        $connectionResolver
+            ->expects($this->never())
+            ->method('resolve');
+
+        $tool = new DatabaseSchemaTool($databaseSchemaService, $connectionResolver);
 
         $result = $tool->execute(detail: 'deep');
 

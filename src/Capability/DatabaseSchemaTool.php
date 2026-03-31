@@ -15,19 +15,27 @@ use HelgeSverre\Toon\Toon;
 use MatesOfMate\DatabaseExtension\Enum\SchemaDetail;
 use MatesOfMate\DatabaseExtension\Enum\SchemaMatchMode;
 use MatesOfMate\DatabaseExtension\Exception\ToolUsageError;
+use MatesOfMate\DatabaseExtension\Service\ConnectionResolver;
+use MatesOfMate\DatabaseExtension\Service\DatabaseSchemaService;
 use Mcp\Capability\Attribute\McpTool;
 use Mcp\Schema\Content\TextContent;
 use Mcp\Schema\Result\CallToolResult;
 
 class DatabaseSchemaTool
 {
-    private const DEFAULT_CONNECTION_NAME = 'default';
-
     private const DESCRIPTION = <<<DESCRIPTION
 Inspect database schema objects in summary, columns, or full detail.
-Available connections: default plus any configured Doctrine DBAL named connections.
-If `connection` is omitted, the default Doctrine connection is used.
+Available connections:
+- default: the Doctrine DBAL default connection
+- any configured Doctrine DBAL named connection
+If `connection` is omitted, the default connection is used.
 DESCRIPTION;
+
+    public function __construct(
+        private readonly DatabaseSchemaService $databaseSchemaService,
+        private readonly ConnectionResolver $connectionResolver,
+    ) {
+    }
 
     /**
      * @param string|null $connection      Optional Doctrine DBAL connection name
@@ -52,29 +60,19 @@ DESCRIPTION;
         try {
             $normalizedDetail = $this->normalizeDetail($detail);
             $normalizedMatchMode = $this->normalizeMatchMode($matchMode);
-            $normalizedConnection = $this->normalizeConnectionName($connection);
 
-            $payload = [
-                'connection' => $normalizedConnection,
-                'default_connection_used' => null === $connection || '' === trim($connection),
-                'detail' => $normalizedDetail,
-                'match_mode' => $normalizedMatchMode,
-                'filter' => $filter,
-                'tables' => [],
-            ];
+            $resolvedConnection = $this->connectionResolver->resolve($connection);
 
-            if ($includeViews) {
-                $payload['views'] = [];
-            }
-
-            if ($includeRoutines) {
-                $payload['routines'] = [
-                    'stored_procedures' => [],
-                    'functions' => [],
-                    'sequences' => [],
-                    'triggers' => [],
-                ];
-            }
+            $payload = $this->databaseSchemaService->getSchemaStructure(
+                $resolvedConnection['name'],
+                $resolvedConnection['connection'],
+                $resolvedConnection['metadata']['platform'] ?? 'unknown',
+                $filter,
+                $normalizedDetail,
+                $normalizedMatchMode,
+                $includeViews,
+                $includeRoutines,
+            );
 
             return CallToolResult::success([
                 new TextContent(Toon::encode($payload)),
@@ -87,15 +85,6 @@ DESCRIPTION;
                 $toolError->getHint() ?? 'Adjust detail or matchMode values and retry.',
             );
         }
-    }
-
-    private function normalizeConnectionName(?string $connection): string
-    {
-        if (null === $connection || '' === trim($connection)) {
-            return self::DEFAULT_CONNECTION_NAME;
-        }
-
-        return trim($connection);
     }
 
     private function errorResult(string $error, string $hint): CallToolResult

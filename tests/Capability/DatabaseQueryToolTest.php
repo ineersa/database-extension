@@ -11,7 +11,9 @@
 
 namespace MatesOfMate\DatabaseExtension\Tests\Capability;
 
+use Doctrine\DBAL\Connection;
 use MatesOfMate\DatabaseExtension\Capability\DatabaseQueryTool;
+use MatesOfMate\DatabaseExtension\Service\ConnectionResolver;
 use MatesOfMate\DatabaseExtension\Service\SafeQueryExecutor;
 use Mcp\Capability\Attribute\McpTool;
 use Mcp\Schema\Content\TextContent;
@@ -33,9 +35,42 @@ class DatabaseQueryToolTest extends TestCase
 
     public function testReturnsSuccessPayloadForReadOnlyQuery(): void
     {
-        $tool = new DatabaseQueryTool(new SafeQueryExecutor());
+        $query = 'SELECT id, email FROM users LIMIT 10';
+        $connection = $this->createMock(Connection::class);
 
-        $result = $tool->execute('SELECT id, email FROM users LIMIT 10');
+        $safeQueryExecutor = $this->createMock(SafeQueryExecutor::class);
+        $safeQueryExecutor
+            ->expects($this->once())
+            ->method('validateReadOnlyQuery')
+            ->with($query);
+        $safeQueryExecutor
+            ->expects($this->once())
+            ->method('execute')
+            ->with($connection, $query)
+            ->willReturn([
+                ['id' => 1, 'email' => 'johannes@sulu.io'],
+            ]);
+
+        $connectionResolver = $this->createMock(ConnectionResolver::class);
+        $connectionResolver
+            ->expects($this->once())
+            ->method('resolve')
+            ->with(null)
+            ->willReturn([
+                'name' => 'default',
+                'default_name' => 'default',
+                'default_used' => true,
+                'metadata' => [
+                    'driver' => 'pdo_sqlite',
+                    'platform' => 'sqlite',
+                    'server_version' => null,
+                ],
+                'connection' => $connection,
+            ]);
+
+        $tool = new DatabaseQueryTool($safeQueryExecutor, $connectionResolver);
+
+        $result = $tool->execute($query);
 
         $this->assertFalse($result->isError);
         $this->assertCount(1, $result->content);
@@ -44,13 +79,19 @@ class DatabaseQueryToolTest extends TestCase
         /** @var TextContent $content */
         $content = $result->content[0];
         $payload = (string) $content->text;
-        $this->assertStringContainsString('connection: default', $payload);
-        $this->assertStringContainsString('rows[0]:', $payload);
+        $this->assertStringContainsString('johannes@sulu.io', $payload);
+        $this->assertStringNotContainsString('default_connection:', $payload);
+        $this->assertStringNotContainsString('available_connections', $payload);
     }
 
     public function testReturnsStructuredErrorPayloadForWriteOperation(): void
     {
-        $tool = new DatabaseQueryTool(new SafeQueryExecutor());
+        $connectionResolver = $this->createMock(ConnectionResolver::class);
+        $connectionResolver
+            ->expects($this->never())
+            ->method('resolve');
+
+        $tool = new DatabaseQueryTool(new SafeQueryExecutor(), $connectionResolver);
 
         $result = $tool->execute('DELETE FROM users WHERE id = 1');
 

@@ -54,12 +54,12 @@ Update the file after completing each sub-task, not just after completing an ent
   - [x] 2.3 Port the schema service, schema inspectors, enums, and expected-error types needed for summary, columns, and full schema modes.
   - [x] 2.4 Remove standalone-server-only concerns such as custom config loading, transport, command bootstrap, and PII support.
   - [x] 2.5 Normalize expected operational failures to structured TOON payloads containing only `error` and `hint`.
-- [ ] 3.0 Integrate DoctrineBundle connection resolution and conditional capability registration
-  - [ ] 3.1 Add a `ConnectionResolver` service that reads named and default DBAL connections from DoctrineBundle services.
-  - [ ] 3.2 Implement connection metadata discovery for use in tool descriptions and the summary resource.
-  - [ ] 3.3 Rebuild or wrap resolved connections through the read-only driver path before query or schema work is executed.
-  - [ ] 3.4 Update `config/config.php` to register the new services and capability classes with autowiring/autoconfiguration.
-  - [ ] 3.5 Make capability exposure conditional on Doctrine service availability while still allowing broken concrete connections to surface runtime errors for debugging.
+- [x] 3.0 Integrate DoctrineBundle connection resolution and conditional capability registration
+  - [x] 3.1 Add a `ConnectionResolver` service that reads named and default DBAL connections from DoctrineBundle services.
+  - [x] 3.2 Implement connection metadata discovery for use in tool descriptions and the summary resource.
+  - [x] 3.3 Rebuild or wrap resolved connections through the read-only driver path before query or schema work is executed.
+  - [x] 3.4 Update `config/config.php` to register the new services and capability classes with autowiring/autoconfiguration.
+  - [x] 3.5 Make capability exposure conditional on Doctrine service availability while still allowing broken concrete connections to surface runtime errors for debugging.
 - [ ] 4.0 Build the Docker-backed Symfony test harness and port the automated tests
   - [ ] 4.1 Create a minimal Symfony test kernel with `FrameworkBundle` and `DoctrineBundle` for integration tests.
   - [ ] 4.2 Add a no-Doctrine test kernel or equivalent fixture setup to verify that capabilities are not exposed when Doctrine services are absent.

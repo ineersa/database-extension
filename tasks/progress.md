@@ -8,6 +8,8 @@ Last updated: 2026-03-30
 - Subtasks `1.1` through `1.6` are complete and checked in `tasks/tasks-database-extension-v1.md`.
 - Task `2.0 Port the core database safety and schema service layer from the standalone MCP` is complete.
 - Subtasks `2.1` through `2.5` are complete and checked in `tasks/tasks-database-extension-v1.md`.
+- Task `3.0 Integrate DoctrineBundle connection resolution and conditional capability registration` is complete.
+- Subtasks `3.1` through `3.5` are complete and checked in `tasks/tasks-database-extension-v1.md`.
 
 ## What Was Completed
 
@@ -48,6 +50,29 @@ Last updated: 2026-03-30
 - Registered service-layer classes in `config/config.php` for autowiring.
 - Added unit coverage for read-only query validation:
   - `tests/Unit/SafeQueryExecutorTest.php`
+
+## Task 3 Completed Work
+
+- Added Symfony/container-aware Doctrine DBAL adapter service:
+  - `src/Service/ConnectionResolver.php`
+  - Resolves default and named connections from DoctrineBundle service layer.
+  - Rebuilds resolved connections through read-only middleware before query/schema execution.
+  - Lists connection metadata (`driver`, `platform`, `server_version`) for discovery use.
+- Wired capabilities to execute against resolved Doctrine DBAL connections:
+  - `src/Capability/DatabaseQueryTool.php`
+    - Uses `ConnectionResolver` + `SafeQueryExecutor` for real read-only query execution.
+  - `src/Capability/DatabaseSchemaTool.php`
+    - Uses `ConnectionResolver` + `DatabaseSchemaService` for real schema extraction.
+  - `src/Capability/ConnectionResource.php`
+    - Uses resolved connection metadata and real schema/routine discovery data.
+- Updated service registration and capability exposure guard:
+  - `config/config.php`
+  - Registers `ConnectionResolver` and database capabilities only when DoctrineBundle service layer classes are available.
+- Expanded tests for the new connection-resolution and wiring path:
+  - `tests/Unit/ConnectionResolverTest.php` (new)
+  - `tests/Capability/DatabaseQueryToolTest.php` (updated)
+  - `tests/Capability/DatabaseSchemaToolTest.php` (updated)
+  - `tests/Capability/ConnectionResourceTest.php` (updated)
 
 ## Scope Guardrails Applied
 

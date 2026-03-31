@@ -13,6 +13,7 @@ namespace MatesOfMate\DatabaseExtension\Capability;
 
 use HelgeSverre\Toon\Toon;
 use MatesOfMate\DatabaseExtension\Exception\ToolUsageError;
+use MatesOfMate\DatabaseExtension\Service\ConnectionResolver;
 use MatesOfMate\DatabaseExtension\Service\SafeQueryExecutor;
 use Mcp\Capability\Attribute\McpTool;
 use Mcp\Schema\Content\TextContent;
@@ -20,16 +21,17 @@ use Mcp\Schema\Result\CallToolResult;
 
 class DatabaseQueryTool
 {
-    private const DEFAULT_CONNECTION_NAME = 'default';
-
     private const DESCRIPTION = <<<DESCRIPTION
 Run read-only SQL queries for debugging and data inspection.
-Available connections: default plus any configured Doctrine DBAL named connections.
-If `connection` is omitted, the default Doctrine connection is used.
+Available connections:
+- default: the Doctrine DBAL default connection
+- any configured Doctrine DBAL named connection
+If `connection` is omitted, the default connection is used.
 DESCRIPTION;
 
     public function __construct(
         private readonly SafeQueryExecutor $safeQueryExecutor,
+        private readonly ConnectionResolver $connectionResolver,
     ) {
     }
 
@@ -43,20 +45,16 @@ DESCRIPTION;
     )]
     public function execute(string $query, ?string $connection = null): CallToolResult
     {
-        $normalizedConnection = $this->normalizeConnectionName($connection);
         $trimmedQuery = trim($query);
 
         try {
             $this->safeQueryExecutor->validateReadOnlyQuery($trimmedQuery);
 
+            $resolvedConnection = $this->connectionResolver->resolve($connection);
+            $rows = $this->safeQueryExecutor->execute($resolvedConnection['connection'], $trimmedQuery);
+
             return CallToolResult::success([
-                new TextContent(Toon::encode([
-                    'connection' => $normalizedConnection,
-                    'default_connection_used' => null === $connection || '' === trim($connection),
-                    'query' => $trimmedQuery,
-                    'rows' => [],
-                    'row_count' => 0,
-                ])),
+                new TextContent(Toon::encode($rows)),
             ]);
         } catch (\Throwable $throwable) {
             $toolError = $this->mapThrowableToToolUsageError($throwable);
@@ -66,15 +64,6 @@ DESCRIPTION;
                 $toolError->getHint() ?? 'Retry with a read-only SELECT query and check connection configuration.'
             );
         }
-    }
-
-    private function normalizeConnectionName(?string $connection): string
-    {
-        if (null === $connection || '' === trim($connection)) {
-            return self::DEFAULT_CONNECTION_NAME;
-        }
-
-        return trim($connection);
     }
 
     private function errorResult(string $error, string $hint): CallToolResult

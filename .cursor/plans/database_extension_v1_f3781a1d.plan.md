@@ -10,7 +10,7 @@ todos:
     status: completed
   - id: add-connection-resolution
     content: Resolve optional/default Doctrine DBAL connections from DoctrineBundle services and reconnect them through the read-only wrapper before use
-    status: pending
+    status: completed
   - id: test-and-docs
     content: Port tests, run the full PHPUnit suite in Docker with a minimal Symfony test kernel and DoctrineBundle wiring, update CI, and rewrite README/INSTRUCTIONS around the real database extension
     status: pending
