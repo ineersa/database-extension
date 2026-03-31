@@ -12,6 +12,7 @@
 namespace MatesOfMate\DatabaseExtension\Tests\Capability;
 
 use MatesOfMate\DatabaseExtension\Capability\DatabaseQueryTool;
+use MatesOfMate\DatabaseExtension\Service\SafeQueryExecutor;
 use Mcp\Capability\Attribute\McpTool;
 use Mcp\Schema\Content\TextContent;
 use PHPUnit\Framework\TestCase;
@@ -32,7 +33,7 @@ class DatabaseQueryToolTest extends TestCase
 
     public function testReturnsSuccessPayloadForReadOnlyQuery(): void
     {
-        $tool = new DatabaseQueryTool();
+        $tool = new DatabaseQueryTool(new SafeQueryExecutor());
 
         $result = $tool->execute('SELECT id, email FROM users LIMIT 10');
 
@@ -49,7 +50,7 @@ class DatabaseQueryToolTest extends TestCase
 
     public function testReturnsStructuredErrorPayloadForWriteOperation(): void
     {
-        $tool = new DatabaseQueryTool();
+        $tool = new DatabaseQueryTool(new SafeQueryExecutor());
 
         $result = $tool->execute('DELETE FROM users WHERE id = 1');
 

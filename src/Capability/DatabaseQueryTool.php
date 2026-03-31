@@ -29,9 +29,8 @@ If `connection` is omitted, the default Doctrine connection is used.
 DESCRIPTION;
 
     public function __construct(
-        private ?SafeQueryExecutor $safeQueryExecutor = null,
+        private readonly SafeQueryExecutor $safeQueryExecutor,
     ) {
-        $this->safeQueryExecutor ??= new SafeQueryExecutor();
     }
 
     /**
@@ -48,7 +47,7 @@ DESCRIPTION;
         $trimmedQuery = trim($query);
 
         try {
-            $this->safeQueryExecutor?->validateReadOnlyQuery($trimmedQuery);
+            $this->safeQueryExecutor->validateReadOnlyQuery($trimmedQuery);
 
             return CallToolResult::success([
                 new TextContent(Toon::encode([
