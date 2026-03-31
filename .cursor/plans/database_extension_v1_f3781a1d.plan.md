@@ -4,10 +4,10 @@ overview: Port the existing read-only Doctrine-backed database MCP behavior into
 todos:
   - id: define-capabilities
     content: Implement the settled Mate-native capability surface with default-connection fallback, TOON output, and a single summary connection resource
-    status: pending
+    status: completed
   - id: port-service-layer
     content: Port DBAL-centric safety, schema, and read-only connection enforcement from the existing MCP without the standalone bootstrap pieces
-    status: pending
+    status: completed
   - id: add-connection-resolution
     content: Resolve optional/default Doctrine DBAL connections from DoctrineBundle services and reconnect them through the read-only wrapper before use
     status: pending

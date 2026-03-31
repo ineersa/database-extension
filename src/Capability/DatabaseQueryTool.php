@@ -12,6 +12,8 @@
 namespace MatesOfMate\DatabaseExtension\Capability;
 
 use HelgeSverre\Toon\Toon;
+use MatesOfMate\DatabaseExtension\Exception\ToolUsageError;
+use MatesOfMate\DatabaseExtension\Service\SafeQueryExecutor;
 use Mcp\Capability\Attribute\McpTool;
 use Mcp\Schema\Content\TextContent;
 use Mcp\Schema\Result\CallToolResult;
@@ -26,6 +28,12 @@ Available connections: default plus any configured Doctrine DBAL named connectio
 If `connection` is omitted, the default Doctrine connection is used.
 DESCRIPTION;
 
+    public function __construct(
+        private ?SafeQueryExecutor $safeQueryExecutor = null,
+    ) {
+        $this->safeQueryExecutor ??= new SafeQueryExecutor();
+    }
+
     /**
      * @param string      $query      SQL query to validate and execute in read-only mode
      * @param string|null $connection Optional Doctrine DBAL connection name
@@ -39,52 +47,26 @@ DESCRIPTION;
         $normalizedConnection = $this->normalizeConnectionName($connection);
         $trimmedQuery = trim($query);
 
-        if ('' === $trimmedQuery) {
+        try {
+            $this->safeQueryExecutor?->validateReadOnlyQuery($trimmedQuery);
+
+            return CallToolResult::success([
+                new TextContent(Toon::encode([
+                    'connection' => $normalizedConnection,
+                    'default_connection_used' => null === $connection || '' === trim($connection),
+                    'query' => $trimmedQuery,
+                    'rows' => [],
+                    'row_count' => 0,
+                ])),
+            ]);
+        } catch (\Throwable $throwable) {
+            $toolError = $this->mapThrowableToToolUsageError($throwable);
+
             return $this->errorResult(
-                'Query must not be empty.',
-                'Provide a read-only SELECT query and include LIMIT 10 when no WHERE clause is present.'
+                $toolError->getMessage(),
+                $toolError->getHint() ?? 'Retry with a read-only SELECT query and check connection configuration.'
             );
         }
-
-        if ($this->containsMultipleStatements($trimmedQuery)) {
-            return $this->errorResult(
-                'Only one SQL statement is allowed per call.',
-                'Split multi-statement requests into separate database-query calls.'
-            );
-        }
-
-        $normalizedQuery = strtoupper($trimmedQuery);
-
-        if (!$this->isReadStatement($normalizedQuery)) {
-            return $this->errorResult(
-                'Only read-only SELECT and WITH queries are allowed.',
-                'Use database-schema first, then run a SELECT query.'
-            );
-        }
-
-        if ($this->containsWriteKeyword($normalizedQuery)) {
-            return $this->errorResult(
-                'Write operations are not allowed by database-query.',
-                'Rewrite the SQL as a read-only SELECT query.'
-            );
-        }
-
-        if ($this->selectWithoutLimitOrWhere($normalizedQuery)) {
-            return $this->errorResult(
-                'SELECT queries without WHERE require LIMIT.',
-                'Add LIMIT 10 (or FETCH NEXT), or add a WHERE clause.'
-            );
-        }
-
-        return CallToolResult::success([
-            new TextContent(Toon::encode([
-                'connection' => $normalizedConnection,
-                'default_connection_used' => null === $connection || '' === trim($connection),
-                'query' => $trimmedQuery,
-                'rows' => [],
-                'row_count' => 0,
-            ])),
-        ]);
     }
 
     private function normalizeConnectionName(?string $connection): string
@@ -96,50 +78,6 @@ DESCRIPTION;
         return trim($connection);
     }
 
-    private function isReadStatement(string $query): bool
-    {
-        return str_starts_with($query, 'SELECT') || str_starts_with($query, 'WITH');
-    }
-
-    private function containsMultipleStatements(string $query): bool
-    {
-        $parts = explode(';', $query);
-        $nonEmptyStatements = array_filter($parts, static fn (string $item): bool => '' !== trim($item));
-
-        return \count($nonEmptyStatements) > 1;
-    }
-
-    private function containsWriteKeyword(string $query): bool
-    {
-        return 1 === preg_match('/\b(INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|TRUNCATE|REPLACE|MERGE|GRANT|REVOKE|CALL|EXEC|EXECUTE)\b/', $query);
-    }
-
-    private function selectWithoutLimitOrWhere(string $query): bool
-    {
-        if (!str_starts_with($query, 'SELECT')) {
-            return false;
-        }
-
-        if (str_contains($query, 'WHERE ')) {
-            return false;
-        }
-
-        if (str_contains($query, 'LIMIT ') || str_contains($query, 'FETCH NEXT')) {
-            return false;
-        }
-
-        return !$this->isAggregateOnlyQuery($query);
-    }
-
-    private function isAggregateOnlyQuery(string $query): bool
-    {
-        if (str_contains($query, 'GROUP BY')) {
-            return false;
-        }
-
-        return 1 === preg_match('/\b(COUNT|SUM|AVG|MIN|MAX|GROUP_CONCAT|STRING_AGG)\s*\(/', $query);
-    }
-
     private function errorResult(string $error, string $hint): CallToolResult
     {
         return CallToolResult::error([
@@ -148,5 +86,18 @@ DESCRIPTION;
                 'hint' => $hint,
             ])),
         ]);
+    }
+
+    private function mapThrowableToToolUsageError(\Throwable $throwable): ToolUsageError
+    {
+        if ($throwable instanceof ToolUsageError) {
+            return $throwable;
+        }
+
+        return new ToolUsageError(
+            message: $throwable->getMessage(),
+            hint: 'Query failed in the database. Verify table/column names and SQL syntax, then retry.',
+            previous: $throwable,
+        );
     }
 }

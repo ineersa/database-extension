@@ -48,12 +48,12 @@ Update the file after completing each sub-task, not just after completing an ent
   - [x] 1.4 Add a `db://{connection}` resource class that returns summary discovery data for tables, views, routines, and basic connection metadata.
   - [x] 1.5 Keep descriptions concise while ensuring they list available connections and clearly identify the default connection.
   - [x] 1.6 Ensure the capability layer returns TOON responses and uses `CallToolResult` where explicit error-state control is required.
-- [ ] 2.0 Port the core database safety and schema service layer from the standalone MCP
-  - [ ] 2.1 Port the read-only Doctrine DBAL middleware classes into the extension namespace.
-  - [ ] 2.2 Port or adapt the safe query execution logic for validated read-only query handling.
-  - [ ] 2.3 Port the schema service, schema inspectors, enums, and expected-error types needed for summary, columns, and full schema modes.
-  - [ ] 2.4 Remove standalone-server-only concerns such as custom config loading, transport, command bootstrap, and PII support.
-  - [ ] 2.5 Normalize expected operational failures to structured TOON payloads containing only `error` and `hint`.
+- [x] 2.0 Port the core database safety and schema service layer from the standalone MCP
+  - [x] 2.1 Port the read-only Doctrine DBAL middleware classes into the extension namespace.
+  - [x] 2.2 Port or adapt the safe query execution logic for validated read-only query handling.
+  - [x] 2.3 Port the schema service, schema inspectors, enums, and expected-error types needed for summary, columns, and full schema modes.
+  - [x] 2.4 Remove standalone-server-only concerns such as custom config loading, transport, command bootstrap, and PII support.
+  - [x] 2.5 Normalize expected operational failures to structured TOON payloads containing only `error` and `hint`.
 - [ ] 3.0 Integrate DoctrineBundle connection resolution and conditional capability registration
   - [ ] 3.1 Add a `ConnectionResolver` service that reads named and default DBAL connections from DoctrineBundle services.
   - [ ] 3.2 Implement connection metadata discovery for use in tool descriptions and the summary resource.

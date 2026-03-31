@@ -12,6 +12,9 @@
 namespace MatesOfMate\DatabaseExtension\Capability;
 
 use HelgeSverre\Toon\Toon;
+use MatesOfMate\DatabaseExtension\Enum\SchemaDetail;
+use MatesOfMate\DatabaseExtension\Enum\SchemaMatchMode;
+use MatesOfMate\DatabaseExtension\Exception\ToolUsageError;
 use Mcp\Capability\Attribute\McpTool;
 use Mcp\Schema\Content\TextContent;
 use Mcp\Schema\Result\CallToolResult;
@@ -19,16 +22,6 @@ use Mcp\Schema\Result\CallToolResult;
 class DatabaseSchemaTool
 {
     private const DEFAULT_CONNECTION_NAME = 'default';
-
-    /**
-     * @var array<int, string>
-     */
-    private const VALID_DETAILS = ['summary', 'columns', 'full'];
-
-    /**
-     * @var array<int, string>
-     */
-    private const VALID_MATCH_MODES = ['contains', 'prefix', 'exact', 'glob'];
 
     private const DESCRIPTION = <<<DESCRIPTION
 Inspect database schema objects in summary, columns, or full detail.
@@ -56,49 +49,44 @@ DESCRIPTION;
         bool $includeViews = false,
         bool $includeRoutines = false,
     ): CallToolResult {
-        $normalizedDetail = strtolower(trim($detail));
-        if (!\in_array($normalizedDetail, self::VALID_DETAILS, true)) {
-            return $this->errorResult(
-                \sprintf('Invalid detail value "%s".', $detail),
-                'Use one of: summary, columns, full.'
-            );
-        }
+        try {
+            $normalizedDetail = $this->normalizeDetail($detail);
+            $normalizedMatchMode = $this->normalizeMatchMode($matchMode);
+            $normalizedConnection = $this->normalizeConnectionName($connection);
 
-        $normalizedMatchMode = strtolower(trim($matchMode));
-        if (!\in_array($normalizedMatchMode, self::VALID_MATCH_MODES, true)) {
-            return $this->errorResult(
-                \sprintf('Invalid matchMode value "%s".', $matchMode),
-                'Use one of: contains, prefix, exact, glob.'
-            );
-        }
-
-        $normalizedConnection = $this->normalizeConnectionName($connection);
-
-        $payload = [
-            'connection' => $normalizedConnection,
-            'default_connection_used' => null === $connection || '' === trim($connection),
-            'detail' => $normalizedDetail,
-            'match_mode' => $normalizedMatchMode,
-            'filter' => $filter,
-            'tables' => [],
-        ];
-
-        if ($includeViews) {
-            $payload['views'] = [];
-        }
-
-        if ($includeRoutines) {
-            $payload['routines'] = [
-                'stored_procedures' => [],
-                'functions' => [],
-                'sequences' => [],
-                'triggers' => [],
+            $payload = [
+                'connection' => $normalizedConnection,
+                'default_connection_used' => null === $connection || '' === trim($connection),
+                'detail' => $normalizedDetail,
+                'match_mode' => $normalizedMatchMode,
+                'filter' => $filter,
+                'tables' => [],
             ];
-        }
 
-        return CallToolResult::success([
-            new TextContent(Toon::encode($payload)),
-        ]);
+            if ($includeViews) {
+                $payload['views'] = [];
+            }
+
+            if ($includeRoutines) {
+                $payload['routines'] = [
+                    'stored_procedures' => [],
+                    'functions' => [],
+                    'sequences' => [],
+                    'triggers' => [],
+                ];
+            }
+
+            return CallToolResult::success([
+                new TextContent(Toon::encode($payload)),
+            ]);
+        } catch (\Throwable $throwable) {
+            $toolError = $this->mapThrowableToToolUsageError($throwable);
+
+            return $this->errorResult(
+                $toolError->getMessage(),
+                $toolError->getHint() ?? 'Adjust detail or matchMode values and retry.',
+            );
+        }
     }
 
     private function normalizeConnectionName(?string $connection): string
@@ -118,5 +106,38 @@ DESCRIPTION;
                 'hint' => $hint,
             ])),
         ]);
+    }
+
+    private function normalizeDetail(string $detail): string
+    {
+        $detailEnum = SchemaDetail::tryFromInput($detail);
+        if (!$detailEnum instanceof SchemaDetail) {
+            throw new ToolUsageError(message: \sprintf('Invalid detail value "%s".', $detail), hint: \sprintf('Use one of: %s.', implode(', ', SchemaDetail::values())));
+        }
+
+        return $detailEnum->value;
+    }
+
+    private function normalizeMatchMode(string $matchMode): string
+    {
+        $matchModeEnum = SchemaMatchMode::tryFromInput($matchMode);
+        if (!$matchModeEnum instanceof SchemaMatchMode) {
+            throw new ToolUsageError(message: \sprintf('Invalid matchMode value "%s".', $matchMode), hint: \sprintf('Use one of: %s.', implode(', ', SchemaMatchMode::values())));
+        }
+
+        return $matchModeEnum->value;
+    }
+
+    private function mapThrowableToToolUsageError(\Throwable $throwable): ToolUsageError
+    {
+        if ($throwable instanceof ToolUsageError) {
+            return $throwable;
+        }
+
+        return new ToolUsageError(
+            message: $throwable->getMessage(),
+            hint: 'Schema extraction failed. Verify connection health and retry.',
+            previous: $throwable,
+        );
     }
 }
