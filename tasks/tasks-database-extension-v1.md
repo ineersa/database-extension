@@ -68,11 +68,11 @@ Update the file after completing each sub-task, not just after completing an ent
   - [x] 4.5 Add capability-level tests covering default connection fallback, structured success/error behavior, and resource payloads.
   - [x] 4.6 Add integration tests that boot the real test container and verify read-only enforcement, schema extraction, and actual extension wiring.
   - [x] 4.7 Ensure the full PHPUnit suite runs through one Docker-backed command.
-- [ ] 5.0 Update package dependencies, CI, and test tooling for the new extension architecture
+- [x] 5.0 Update package dependencies, CI, and test tooling for the new extension architecture
   - [x] 5.1 Update `composer.json` with DoctrineBundle and any required DBAL or testing dependencies for the v1 architecture.
   - [x] 5.2 Add or update test scripts so local and CI execution both use the Docker-backed PHPUnit flow.
-  - [ ] 5.3 Update `.github/workflows/ci.yml` to boot the Docker test stack and run the full PHPUnit suite.
-  - [ ] 5.4 Verify that the planned dependency ranges remain aligned with the DBAL 4-first implementation target.
+  - [x] 5.3 Update `.github/workflows/ci.yml` to boot the Docker test stack and run the full PHPUnit suite.
+  - [x] 5.4 Verify that the planned dependency ranges remain aligned with the DBAL 4-first implementation target.
 - [ ] 6.0 Rewrite developer-facing documentation and Mate instructions for the final v1 behavior
   - [ ] 6.1 Rewrite `README.md` to describe the actual extension capabilities, DoctrineBundle assumptions, supported databases, and read-only guarantees.
   - [ ] 6.2 Rewrite `INSTRUCTIONS.md` to contain the schema-first workflow guidance, row-limit defaults, and dialect-specific reminders moved out of capability descriptions.

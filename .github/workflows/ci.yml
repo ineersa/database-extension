@@ -1,53 +1,43 @@
 name: CI
 
 on:
-    push:
-        branches: [ main ]
-    pull_request:
+  push:
+    branches: [main]
+  pull_request:
 
 jobs:
-    lint:
-        name: Lint
-        runs-on: ubuntu-latest
+  lint:
+    name: Lint (PHP 8.2)
+    runs-on: ubuntu-latest
 
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-            - name: Setup PHP
-              uses: shivammathur/setup-php@v2
-              with:
-                  php-version: '8.2'
-                  extensions: json
-                  coverage: none
+      - name: Run linters
+        run: bash tests/bin/run-docker-quality.sh lint
 
-            - name: Install dependencies
-              run: composer install --prefer-dist --no-progress --no-interaction
+  test:
+    name: Test (PHP ${{ matrix.php }} / Symfony ${{ matrix.symfony }})
+    runs-on: ubuntu-latest
 
-            - name: Run linters
-              run: composer lint
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - php: "8.2"
+            symfony: "^7.3"
+            mode: php82
+          - php: "8.3"
+            symfony: "^7.3"
+            mode: php83
+          - php: "8.4"
+            symfony: "^8.0"
+            mode: php84
 
-    test:
-        name: Test
-        runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-        strategy:
-            matrix:
-                php-version: ['8.2', '8.3']
-
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
-
-            - name: Setup PHP
-              uses: shivammathur/setup-php@v2
-              with:
-                  php-version: ${{ matrix.php-version }}
-                  extensions: json
-                  coverage: none
-
-            - name: Install dependencies
-              run: composer install --prefer-dist --no-progress --no-interaction
-
-            - name: Run tests
-              run: composer test
+      - name: Run tests
+        run: bash tests/bin/run-docker-phpunit.sh ${{ matrix.mode }}

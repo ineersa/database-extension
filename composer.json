@@ -23,6 +23,9 @@
     "helgesverre/toon": "^3.0",
     "symfony/ai-mate": "^0.3 || ^0.4 || ^0.5 || ^0.6@dev"
   },
+  "suggest": {
+    "doctrine/doctrine-bundle": "Required for database capability exposure via DoctrineBundle DBAL connections (^2.14)"
+  },
   "require-dev": {
     "doctrine/doctrine-bundle": "^2.14",
     "friendsofphp/php-cs-fixer": "^3.0",

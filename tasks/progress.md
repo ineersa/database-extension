@@ -12,8 +12,8 @@ Last updated: 2026-03-31
 - Subtasks `3.1` through `3.5` are complete and checked in `tasks/tasks-database-extension-v1.md`.
 - Task `4.0 Build the Docker-backed Symfony test harness and port the automated tests` is complete.
 - Subtasks `4.1` through `4.7` are complete and checked in `tasks/tasks-database-extension-v1.md`.
-- Task `5.0 Update package dependencies, CI, and test tooling for the new extension architecture` is in progress.
-- Subtasks `5.1` and `5.2` are complete and checked in `tasks/tasks-database-extension-v1.md`.
+- Task `5.0 Update package dependencies, CI, and test tooling for the new extension architecture` is complete.
+- Subtasks `5.1` through `5.4` are complete and checked in `tasks/tasks-database-extension-v1.md`.
 
 ## What Was Completed
 
@@ -140,6 +140,23 @@ Last updated: 2026-03-31
 - Updated `Dockerfile.test` to install and enable Xdebug for Docker coverage collection.
 - Added ignore rule for generated app-only config reference file:
   - `.gitignore` now includes `config/reference.php`.
+
+## Task 5 Completed Work
+
+- Updated `.github/workflows/ci.yml` to use the Docker-backed test flow:
+  - Lint job runs `tests/bin/run-docker-quality.sh lint` (PHP 8.2 Docker container, no database dependencies).
+  - Test job uses a `fail-fast: false` matrix with two entries:
+    - PHP 8.2 / Symfony ^7.3 (`run-docker-phpunit.sh php82`)
+    - PHP 8.4 / Symfony ^8.0 (`run-docker-phpunit.sh php84`)
+  - Both entries reuse the existing Docker scripts that handle database service startup, container build, test execution, and cleanup.
+  - Removed the previous host-PHP-based lint and test jobs.
+- Verified dependency ranges against the DBAL 4-first implementation target:
+  - `doctrine/dbal: ^4.0` — correctly enforces DBAL 4 only (lock resolves to 4.4.3).
+  - `doctrine/doctrine-bundle: ^2.14` (dev) — supports DBAL 4 (`^3.7.0 || ^4.0`) and is broad enough to include Symfony 8-compatible releases.
+  - `symfony/framework-bundle: ^7.3 || ^8.0` (dev) — covers the full CI matrix.
+  - `php: >=8.2` — covers both matrix PHP versions (8.2, 8.4).
+  - No direct DoctrineBundle class imports in source code — all interaction is service-container-based.
+- Added `suggest` section to `composer.json` hinting at `doctrine/doctrine-bundle` for users who install the extension without it.
 
 ## Scope Guardrails Applied
 

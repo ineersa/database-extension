@@ -18,17 +18,22 @@ case "${MODE}" in
         docker compose -f "${COMPOSE_FILE}" build php82-sf73
         docker compose -f "${COMPOSE_FILE}" run --rm -e RUN_COMMAND=test php82-sf73
         ;;
+    php83)
+        docker compose -f "${COMPOSE_FILE}" build php83-sf73
+        docker compose -f "${COMPOSE_FILE}" run --rm -e RUN_COMMAND=test php83-sf73
+        ;;
     php84)
         docker compose -f "${COMPOSE_FILE}" build php84-sf80
         docker compose -f "${COMPOSE_FILE}" run --rm -e RUN_COMMAND=test php84-sf80
         ;;
     matrix)
-        docker compose -f "${COMPOSE_FILE}" build php82-sf73 php84-sf80
+        docker compose -f "${COMPOSE_FILE}" build php82-sf73 php83-sf73 php84-sf80
         docker compose -f "${COMPOSE_FILE}" run --rm -e RUN_COMMAND=test php82-sf73
+        docker compose -f "${COMPOSE_FILE}" run --rm -e RUN_COMMAND=test php83-sf73
         docker compose -f "${COMPOSE_FILE}" run --rm -e RUN_COMMAND=test php84-sf80
         ;;
     *)
-        echo "Unknown mode '${MODE}'. Use php82, php84, or matrix." >&2
+        echo "Unknown mode '${MODE}'. Use php82, php83, php84, or matrix." >&2
         exit 1
         ;;
 esac

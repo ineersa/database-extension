@@ -65,6 +65,31 @@ services:
                 condition: service_healthy
         command: ["bash", "/app/tests/bin/run-container-phpunit.sh"]
 
+    php83-sf73:
+        build:
+            context: .
+            dockerfile: Dockerfile.test
+            args:
+                PHP_VERSION: "8.3"
+        working_dir: /app
+        volumes:
+            - .:/app
+            - composer-cache:/tmp/composer-cache
+        environment:
+            APP_ENV: test
+            APP_DEBUG: 1
+            SYMFONY_CONSTRAINT: ^7.3
+            COMPOSER_CACHE_DIR: /tmp/composer-cache
+            TEST_MYSQL_URL: mysql://test_user:test_password@mysql:3306/database_extension_test?serverVersion=8.0
+            TEST_PGSQL_URL: postgresql://test_user:test_password@postgres:5432/database_extension_test?serverVersion=16
+            TEST_SQLITE_PATH: /tmp/database_extension_test.sqlite
+        depends_on:
+            mysql:
+                condition: service_healthy
+            postgres:
+                condition: service_healthy
+        command: ["bash", "/app/tests/bin/run-container-phpunit.sh"]
+
     php84-sf80:
         build:
             context: .
