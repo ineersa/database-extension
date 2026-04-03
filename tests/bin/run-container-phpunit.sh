@@ -15,6 +15,10 @@ rm -rf "${WORKDIR}/.git"
 
 cd "${WORKDIR}"
 
+export COMPOSER_ROOT_VERSION="${COMPOSER_ROOT_VERSION:-1.0.0}"
+
+rm -f composer.lock
+composer update --no-interaction --prefer-dist --no-progress
 composer update --no-interaction --prefer-dist --no-progress --with-all-dependencies "symfony/*:${SYMFONY_CONSTRAINT}"
 
 case "${RUN_COMMAND}" in
