@@ -39,16 +39,38 @@ final class ApplicationContainerFactory
     }
 
     /**
-     * @param non-empty-string $projectRoot
+     * @param string $projectRoot project directory used to boot the application kernel when the
+     *                            given container does not already expose Doctrine (empty skips boot)
      */
     public static function create(ContainerInterface $mateContainer, string $projectRoot): ContainerInterface
     {
+        if (self::doctrineServiceLayerAvailable($mateContainer)) {
+            return $mateContainer;
+        }
+
+        if ('' === $projectRoot) {
+            return $mateContainer;
+        }
+
         $applicationContainer = self::tryBootKernelContainer($projectRoot);
         if (null !== $applicationContainer) {
             return $applicationContainer;
         }
 
         return $mateContainer;
+    }
+
+    private static function doctrineServiceLayerAvailable(ContainerInterface $container): bool
+    {
+        if ($container->has('doctrine')) {
+            return true;
+        }
+
+        if ($container->has('doctrine.dbal.default_connection')) {
+            return true;
+        }
+
+        return $container->hasParameter('doctrine.connections');
     }
 
     /**

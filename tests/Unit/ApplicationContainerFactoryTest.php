@@ -28,6 +28,8 @@ class ApplicationContainerFactoryTest extends TestCase
     public function testFallsBackToMateContainerWhenProjectRootIsInvalid(): void
     {
         $mate = $this->createMock(ContainerInterface::class);
+        $mate->method('has')->willReturn(false);
+        $mate->method('hasParameter')->willReturn(false);
 
         $result = ApplicationContainerFactory::create($mate, '/does/not/exist/'.uniqid('', true));
 
@@ -37,11 +39,33 @@ class ApplicationContainerFactoryTest extends TestCase
     public function testFallsBackWhenKernelClassDoesNotExist(): void
     {
         $mate = $this->createMock(ContainerInterface::class);
+        $mate->method('has')->willReturn(false);
+        $mate->method('hasParameter')->willReturn(false);
         $projectRoot = realpath(\dirname(__DIR__, 2));
         $this->assertNotFalse($projectRoot);
 
         $result = ApplicationContainerFactory::create($mate, $projectRoot);
 
         $this->assertSame($mate, $result);
+    }
+
+    public function testReturnsSameContainerWhenDoctrineServiceLayerIsPresent(): void
+    {
+        $mate = $this->createMock(ContainerInterface::class);
+        $mate->method('has')->willReturnCallback(static fn (string $id): bool => 'doctrine' === $id);
+        $mate->method('hasParameter')->willReturn(false);
+
+        $result = ApplicationContainerFactory::create($mate, '/any/root');
+
+        $this->assertSame($mate, $result);
+    }
+
+    public function testReturnsMateContainerWhenProjectRootIsEmpty(): void
+    {
+        $mate = $this->createMock(ContainerInterface::class);
+        $mate->method('has')->willReturn(false);
+        $mate->method('hasParameter')->willReturn(false);
+
+        $this->assertSame($mate, ApplicationContainerFactory::create($mate, ''));
     }
 }

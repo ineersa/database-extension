@@ -4,10 +4,10 @@ Safe, read-only database access for AI assistants running inside [Symfony AI Mat
 
 ## Capabilities
 
-| Capability | Type | Description |
-|---|---|---|
-| `database-query` | Tool | Run validated read-only SQL queries for debugging and data inspection |
-| `database-schema` | Tool | Inspect schema objects in summary, columns, or full detail |
+| Capability          | Type     | Description                                                                 |
+| ------------------- | -------- | --------------------------------------------------------------------------- |
+| `database-query`    | Tool     | Run validated read-only SQL queries for debugging and data inspection       |
+| `database-schema`   | Tool     | Inspect schema objects in summary, columns, or full detail                  |
 | `db://{connection}` | Resource | Discovery summary for one connection: tables, views, routines, and metadata |
 
 All capabilities use the host application's Doctrine DBAL connections. When `connection` is omitted, the default Doctrine connection is used automatically.
@@ -55,10 +55,10 @@ All queries execute inside a transaction that is always rolled back, regardless 
 
 Run a read-only SQL query against a Doctrine DBAL connection.
 
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `query` | string | yes | — | SQL query to validate and execute |
-| `connection` | string | no | default connection | Doctrine DBAL connection name |
+| Parameter    | Type   | Required | Default            | Description                       |
+| ------------ | ------ | -------- | ------------------ | --------------------------------- |
+| `query`      | string | yes      | —                  | SQL query to validate and execute |
+| `connection` | string | no       | default connection | Doctrine DBAL connection name     |
 
 Returns query result rows in TOON format. Long text values (>200 characters) are truncated to `<TEXT>` in multi-row results to reduce token usage.
 
@@ -66,51 +66,57 @@ Returns query result rows in TOON format. Long text values (>200 characters) are
 
 Inspect database schema objects with configurable detail and filtering.
 
-| Parameter | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `connection` | string | no | default connection | Doctrine DBAL connection name |
-| `filter` | string | no | `""` | Object name filter |
-| `detail` | string | no | `summary` | Detail level: `summary`, `columns`, `full` |
-| `matchMode` | string | no | `contains` | Filter matching: `contains`, `prefix`, `exact`, `glob` |
-| `includeViews` | bool | no | `false` | Include views in the response |
-| `includeRoutines` | bool | no | `false` | Include procedures/functions/sequences/triggers |
+| Parameter         | Type   | Required | Default            | Description                                            |
+| ----------------- | ------ | -------- | ------------------ | ------------------------------------------------------ |
+| `connection`      | string | no       | default connection | Doctrine DBAL connection name                          |
+| `filter`          | string | no       | `""`               | Object name filter                                     |
+| `detail`          | string | no       | `summary`          | Detail level: `summary`, `columns`, `full`             |
+| `matchMode`       | string | no       | `contains`         | Filter matching: `contains`, `prefix`, `exact`, `glob` |
+| `includeViews`    | bool   | no       | `false`            | Include views in the response                          |
+| `includeRoutines` | bool   | no       | `false`            | Include procedures/functions/sequences/triggers        |
 
 ### `db://{connection}`
 
 Resource template returning a discovery summary for a single connection. Includes connection metadata (driver, platform, server version), table names, view names, and routine names.
 
-## V1 Scope
-
-This is the initial release. The following limitations apply:
+## Scope
 
 - **Single summary resource** — One `db://{connection}` resource per connection. Per-table, per-view, or per-routine resources are not included.
 - **No PII redaction** — Query results are returned as-is. Sensitive data filtering is not implemented.
 - **Doctrine-only** — All database access goes through DoctrineBundle DBAL. There is no custom or standalone connection path.
 - **MySQL, PostgreSQL, SQLite** — Other engines supported by Doctrine DBAL may work but are not tested.
+- **Standalone MCP server** — For a separate MCP process with YAML connection config, optional PII redaction, and SQL Server support, see [ineersa/mcp-sql-server](https://github.com/ineersa/mcp-sql-server).
 
 ## How It Works
 
 ```
-┌──────────────┐      ┌────────────────────┐      ┌──────────────────┐
-│  Mate AI     │─────▶│  DatabaseQueryTool  │─────▶│ SafeQueryExecutor│
-│  Assistant   │      │  DatabaseSchemaTool │      │ DatabaseSchema   │
-│              │      │  ConnectionResource │      │  Service         │
-└──────────────┘      └────────────────────┘      └──────────────────┘
-                              │                           │
-                              ▼                           ▼
-                      ┌────────────────┐          ┌──────────────────┐
-                      │ Connection     │─────────▶│ ReadOnly         │
-                      │  Resolver      │          │  Middleware       │
-                      └────────────────┘          └──────────────────┘
-                              │                           │
-                              ▼                           ▼
-                      ┌────────────────────────────────────────────┐
-                      │     DoctrineBundle DBAL Connections         │
-                      │     (MySQL · PostgreSQL · SQLite)           │
-                      └────────────────────────────────────────────┘
+┌──────────────┐      ┌─────────────────────────┐      ┌──────────────────┐
+│  Mate AI     │─────▶│ DatabaseQueryTool       │─────▶│ SafeQueryExecutor│
+│  Assistant   │      │ DatabaseSchemaTool      │─────▶│ DatabaseSchema   │
+│              │      │ ConnectionResource      │─────▶│ Service          │
+└──────────────┘      └─────────────────────────┘      └────────┬─────────┘
+                                                                │
+                                                                ▼
+              ┌───────────────────────────────────────────────────────────┐
+              │ ConnectionResolver                                          │
+              │   Injected container: ApplicationContainerFactory::create() │
+              │   (boots App\Kernel or MATE_SYMFONY_KERNEL_CLASS once)      │
+              │   → application container (DoctrineBundle lives here)       │
+              └─────────────────────────────┬─────────────────────────────┘
+                                            │
+                                            ▼
+                                  ┌──────────────────┐
+                                  │ ReadOnly         │
+                                  │ Middleware       │
+                                  │ (rebuilt conn.)  │
+                                  └────────┬─────────┘
+                                           ▼
+              ┌────────────────────────────────────────────────────────────┐
+              │ DoctrineBundle DBAL connections (MySQL · PostgreSQL · SQLite)│
+              └────────────────────────────────────────────────────────────┘
 ```
 
-The extension reads connection names and metadata from DoctrineBundle's service layer. Resolved connections are rebuilt through the read-only DBAL middleware before any query or schema operation executes.
+Symfony AI Mate’s MCP container does not register DoctrineBundle, so **`ConnectionResolver`** cannot use Mate’s own **`service_container`** to reach DBAL. Instead, **`ApplicationContainerFactory::create()`** boots the project’s **`App\Kernel`** once per process (or the class from **`MATE_SYMFONY_KERNEL_CLASS`**) and injects that **application** **`ContainerInterface`**, where `doctrine` / `doctrine.dbal.*` services actually live. Connection names and metadata come from DoctrineBundle on that container; each resolved connection is rebuilt through read-only DBAL middleware before any query or schema operation runs.
 
 ## Contributing
 

@@ -54,18 +54,21 @@ return static function (ContainerConfigurator $container, ContainerBuilder $cont
         || $containerBuilder->hasParameter('doctrine.connections');
 
     if ($isMateBuildContainer || $doctrineServiceLayerAvailable) {
-        if ($isMateBuildContainer) {
-            $services->set('matesofmate.database_extension.application_container')
-                ->class(ContainerInterface::class)
-                ->factory([ApplicationContainerFactory::class, 'create'])
-                ->args([service('service_container'), '%mate.root_dir%']);
-
-            $services->set(ConnectionResolver::class)
-                ->arg('$container', service('matesofmate.database_extension.application_container'));
-        } else {
-            $services->set(ConnectionResolver::class)
-                ->arg('$container', service('service_container'));
+        $projectRoot = '';
+        if ($containerBuilder->hasParameter('mate.root_dir')) {
+            $projectRoot = (string) $containerBuilder->getParameter('mate.root_dir');
+        } elseif ($containerBuilder->hasParameter('kernel.project_dir')) {
+            $projectRoot = (string) $containerBuilder->getParameter('kernel.project_dir');
         }
+        $containerBuilder->setParameter('matesofmate.database_extension.project_root', $projectRoot);
+
+        $services->set('matesofmate.database_extension.application_container')
+            ->class(ContainerInterface::class)
+            ->factory([ApplicationContainerFactory::class, 'create'])
+            ->args([service('service_container'), '%matesofmate.database_extension.project_root%']);
+
+        $services->set(ConnectionResolver::class)
+            ->arg('$container', service('matesofmate.database_extension.application_container'));
     }
 
     if (!$isMateBuildContainer && !$doctrineServiceLayerAvailable) {
