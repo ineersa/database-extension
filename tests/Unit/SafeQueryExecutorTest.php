@@ -50,8 +50,8 @@ class SafeQueryExecutorTest extends TestCase
             $executor->validateReadOnlyQuery('DELETE FROM users WHERE id = 1');
             $this->fail('Expected ToolUsageError was not thrown.');
         } catch (ToolUsageError $error) {
-            $this->assertSame('Only read-only SELECT and WITH queries are allowed.', $error->getMessage());
-            $this->assertSame('Use database-schema first, then run a SELECT query.', $error->getHint());
+            $this->assertSame('Only read-only queries are allowed.', $error->getMessage());
+            $this->assertSame('Use SELECT, SHOW, EXPLAIN, DESCRIBE, DESC, WITH … SELECT, VALUES, or TABLE (see database-schema first).', $error->getHint());
         }
     }
 
@@ -88,6 +88,72 @@ class SafeQueryExecutorTest extends TestCase
             $this->assertSame('Only one SQL statement is allowed per call.', $error->getMessage());
             $this->assertSame('Split multi-statement requests into separate database-query calls.', $error->getHint());
         }
+    }
+
+    public function testAcceptsSingleStatementWithSemicolonInsideDoubleQuotedLiteral(): void
+    {
+        $executor = new SafeQueryExecutor();
+
+        $executor->validateReadOnlyQuery('SELECT id FROM users WHERE code = "asd;asd" LIMIT 10');
+
+        $this->addToAssertionCount(1);
+    }
+
+    public function testAcceptsSingleStatementWithSemicolonInsideSingleQuotedLiteral(): void
+    {
+        $executor = new SafeQueryExecutor();
+
+        $executor->validateReadOnlyQuery('SELECT id FROM users WHERE code = \'a;b\' LIMIT 10');
+
+        $this->addToAssertionCount(1);
+    }
+
+    public function testAcceptsSingleStatementWithSemicolonAfterEscapedSingleQuoteInLiteral(): void
+    {
+        $executor = new SafeQueryExecutor();
+
+        $executor->validateReadOnlyQuery('SELECT id FROM users WHERE code = \'a\'\'b;c\' LIMIT 10');
+
+        $this->addToAssertionCount(1);
+    }
+
+    public function testAcceptsWithFollowedBySelect(): void
+    {
+        $executor = new SafeQueryExecutor();
+
+        $executor->validateReadOnlyQuery('WITH c AS (SELECT 1 AS n) SELECT n FROM c LIMIT 10');
+
+        $this->addToAssertionCount(1);
+    }
+
+    public function testRejectsWithWithoutFollowingSelect(): void
+    {
+        $executor = new SafeQueryExecutor();
+
+        try {
+            $executor->validateReadOnlyQuery('WITH c AS (SELECT 1)');
+            $this->fail('Expected ToolUsageError was not thrown.');
+        } catch (ToolUsageError $error) {
+            $this->assertSame('Only read-only queries are allowed.', $error->getMessage());
+        }
+    }
+
+    public function testAcceptsExplainSelect(): void
+    {
+        $executor = new SafeQueryExecutor();
+
+        $executor->validateReadOnlyQuery('EXPLAIN SELECT 1 LIMIT 1');
+
+        $this->addToAssertionCount(1);
+    }
+
+    public function testAcceptsValuesStatement(): void
+    {
+        $executor = new SafeQueryExecutor();
+
+        $executor->validateReadOnlyQuery('VALUES (1), (2)');
+
+        $this->addToAssertionCount(1);
     }
 
     public function testExecuteTruncatesLongTextWhenMultipleRowsAreReturned(): void

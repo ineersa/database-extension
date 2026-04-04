@@ -54,8 +54,6 @@ DESCRIPTION;
         $trimmedQuery = trim($query);
 
         try {
-            $this->safeQueryExecutor->validateReadOnlyQuery($trimmedQuery);
-
             $resolvedConnection = $this->connectionResolver->resolve($connection);
             $rows = $this->safeQueryExecutor->execute($resolvedConnection['connection'], $trimmedQuery);
 

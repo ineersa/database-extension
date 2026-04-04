@@ -41,10 +41,6 @@ class DatabaseQueryToolTest extends TestCase
         $safeQueryExecutor = $this->createMock(SafeQueryExecutor::class);
         $safeQueryExecutor
             ->expects($this->once())
-            ->method('validateReadOnlyQuery')
-            ->with($query);
-        $safeQueryExecutor
-            ->expects($this->once())
             ->method('execute')
             ->with($connection, $query)
             ->willReturn([
@@ -86,10 +82,25 @@ class DatabaseQueryToolTest extends TestCase
 
     public function testReturnsStructuredErrorPayloadForWriteOperation(): void
     {
+        $connection = $this->createMock(Connection::class);
+        $connection->expects($this->never())->method('beginTransaction');
+
         $connectionResolver = $this->createMock(ConnectionResolver::class);
         $connectionResolver
-            ->expects($this->never())
-            ->method('resolve');
+            ->expects($this->once())
+            ->method('resolve')
+            ->with(null)
+            ->willReturn([
+                'name' => 'default',
+                'default_name' => 'default',
+                'default_used' => true,
+                'metadata' => [
+                    'driver' => 'pdo_sqlite',
+                    'platform' => 'sqlite',
+                    'server_version' => null,
+                ],
+                'connection' => $connection,
+            ]);
 
         $tool = new DatabaseQueryTool(new SafeQueryExecutor(), $connectionResolver);
 

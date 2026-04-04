@@ -9,10 +9,12 @@
  * file that was distributed with this source code.
  */
 
+use Rector\CodeQuality\Rector\Identical\FlipTypeControlToUseExclusiveTypeRector;
 use Rector\Config\RectorConfig;
 use Rector\PHPUnit\Set\PHPUnitSetList;
 use Rector\Set\ValueObject\LevelSetList;
 use Rector\Set\ValueObject\SetList;
+use Rector\TypeDeclaration\Rector\StmtsAwareInterface\SafeDeclareStrictTypesRector;
 
 return RectorConfig::configure()
     ->withPaths([
@@ -21,6 +23,10 @@ return RectorConfig::configure()
     ])
     ->withSkip([
         __DIR__.'/vendor',
+        // Rector 2.4 TYPE_DECLARATION adds strict_types; project omits it (AGENTS.md / CLAUDE.md).
+        SafeDeclareStrictTypesRector::class,
+        // Keep explicit null checks in ApplicationContainerFactory (nullable handles).
+        FlipTypeControlToUseExclusiveTypeRector::class,
     ])
     ->withPhpSets(php82: true)
     ->withSets([

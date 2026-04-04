@@ -18,27 +18,25 @@ use MatesOfMate\DatabaseExtension\Exception\ToolUsageError;
 class SafeQueryExecutor
 {
     /**
+     * Allowed first tokens for read-only execution (Laravel Boost database-query parity).
+     *
      * @var list<string>
      */
-    private const FORBIDDEN_KEYWORDS = [
-        'COMMIT',
-        'ROLLBACK',
-        'TRANSACTION',
-        'INSERT',
-        'UPDATE',
-        'DELETE',
-        'DROP',
-        'ALTER',
-        'CREATE',
-        'TRUNCATE',
-        'REPLACE',
-        'MERGE',
-        'GRANT',
-        'REVOKE',
-        'CALL',
-        'EXEC',
-        'EXECUTE',
+    private const READ_ONLY_STATEMENT_FIRST_WORDS = [
+        'SELECT',
+        'SHOW',
+        'EXPLAIN',
+        'DESCRIBE',
+        'DESC',
+        'WITH',
+        'VALUES',
+        'TABLE',
     ];
+
+    /**
+     * Write / transaction keywords not allowed anywhere in the normalized query (word-boundary match).
+     */
+    private const FORBIDDEN_KEYWORDS_PATTERN = '/\b(COMMIT|ROLLBACK|TRANSACTION|INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|TRUNCATE|REPLACE|MERGE|GRANT|REVOKE|CALL|EXEC|EXECUTE)\b/';
 
     /**
      * @return list<array<string, mixed>>
@@ -78,7 +76,7 @@ class SafeQueryExecutor
         $normalizedQuery = strtoupper($trimmedQuery);
 
         if (!$this->isReadStatement($normalizedQuery)) {
-            throw new ToolUsageError(message: 'Only read-only SELECT and WITH queries are allowed.', hint: 'Use database-schema first, then run a SELECT query.');
+            throw new ToolUsageError(message: 'Only read-only queries are allowed.', hint: 'Use SELECT, SHOW, EXPLAIN, DESCRIBE, DESC, WITH … SELECT, VALUES, or TABLE (see database-schema first).');
         }
 
         $forbiddenKeyword = $this->findForbiddenKeyword($normalizedQuery);
@@ -93,26 +91,152 @@ class SafeQueryExecutor
 
     private function isReadStatement(string $query): bool
     {
-        return str_starts_with($query, 'SELECT') || str_starts_with($query, 'WITH');
+        $firstWord = $this->firstSqlToken($query);
+        if (null === $firstWord) {
+            return false;
+        }
+
+        if (!\in_array($firstWord, self::READ_ONLY_STATEMENT_FIRST_WORDS, true)) {
+            return false;
+        }
+
+        if ('WITH' === $firstWord) {
+            return $this->withClauseLeadsToReadOnlySelect($query);
+        }
+
+        return true;
+    }
+
+    private function firstSqlToken(string $query): ?string
+    {
+        if (1 !== preg_match('/^([A-Z][A-Z0-9_]*)/', $query, $matches)) {
+            return null;
+        }
+
+        return $matches[1];
+    }
+
+    /**
+     * Require a trailing SELECT and reject obvious write statements after the CTE list (Boost parity).
+     */
+    private function withClauseLeadsToReadOnlySelect(string $query): bool
+    {
+        if (1 !== preg_match('/\)\s*SELECT\b/', $query)) {
+            return false;
+        }
+
+        return 1 !== preg_match('/\)\s*(DELETE|UPDATE|INSERT|DROP|ALTER|TRUNCATE|REPLACE|RENAME|CREATE)\b/', $query);
     }
 
     private function containsMultipleStatements(string $query): bool
     {
-        $parts = explode(';', $query);
+        $parts = $this->splitOnStatementSemicolons($query);
         $nonEmptyStatements = array_filter($parts, static fn (string $item): bool => '' !== trim($item));
 
         return \count($nonEmptyStatements) > 1;
     }
 
-    private function findForbiddenKeyword(string $query): ?string
+    /**
+     * Splits on semicolons that are statement terminators. Semicolons inside SQL string literals
+     * (single quotes, with doubled quote for escape), double-quoted delimiters, and MySQL-style
+     * backtick identifiers (doubled backtick for escape) are ignored.
+     *
+     * @return list<string>
+     */
+    private function splitOnStatementSemicolons(string $query): array
     {
-        foreach (self::FORBIDDEN_KEYWORDS as $keyword) {
-            if (1 === preg_match('/\b'.$keyword.'\b/', $query)) {
-                return $keyword;
+        $segments = [];
+        $current = '';
+        $len = \strlen($query);
+        $inSingle = false;
+        $inDouble = false;
+        $inBacktick = false;
+
+        for ($i = 0; $i < $len; ++$i) {
+            $c = $query[$i];
+
+            if ($inSingle) {
+                $current .= $c;
+                if ('\'' === $c) {
+                    if ($i + 1 < $len && '\'' === $query[$i + 1]) {
+                        $current .= $query[++$i];
+                    } else {
+                        $inSingle = false;
+                    }
+                }
+
+                continue;
             }
+
+            if ($inDouble) {
+                $current .= $c;
+                if ('"' === $c) {
+                    if ($i + 1 < $len && '"' === $query[$i + 1]) {
+                        $current .= $query[++$i];
+                    } else {
+                        $inDouble = false;
+                    }
+                }
+
+                continue;
+            }
+
+            if ($inBacktick) {
+                $current .= $c;
+                if ('`' === $c) {
+                    if ($i + 1 < $len && '`' === $query[$i + 1]) {
+                        $current .= $query[++$i];
+                    } else {
+                        $inBacktick = false;
+                    }
+                }
+
+                continue;
+            }
+
+            if ('\'' === $c) {
+                $inSingle = true;
+                $current .= $c;
+
+                continue;
+            }
+
+            if ('"' === $c) {
+                $inDouble = true;
+                $current .= $c;
+
+                continue;
+            }
+
+            if ('`' === $c) {
+                $inBacktick = true;
+                $current .= $c;
+
+                continue;
+            }
+
+            if (';' === $c) {
+                $segments[] = $current;
+                $current = '';
+
+                continue;
+            }
+
+            $current .= $c;
         }
 
-        return null;
+        $segments[] = $current;
+
+        return $segments;
+    }
+
+    private function findForbiddenKeyword(string $query): ?string
+    {
+        if (1 !== preg_match(self::FORBIDDEN_KEYWORDS_PATTERN, $query, $matches)) {
+            return null;
+        }
+
+        return $matches[1];
     }
 
     private function selectWithoutLimitOrWhere(string $query): bool
