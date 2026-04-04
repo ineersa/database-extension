@@ -155,7 +155,6 @@ Local-only variants that skip Docker are available for faster iteration:
 composer lint:local    # Runs Rector, PHP CS Fixer, PHPStan on host PHP
 composer fix:local     # Applies Rector and PHP CS Fixer fixes on host PHP
 composer test:local    # Runs PHPUnit on host PHP (requires local database setup)
-composer coverage:local
 ```
 
 ### Coverage

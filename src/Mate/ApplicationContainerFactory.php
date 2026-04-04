@@ -100,9 +100,10 @@ final class ApplicationContainerFactory
         }
 
         try {
-            $env = self::readEnvString('APP_ENV', 'dev');
-            $debug = self::readEnvBool('APP_DEBUG', true);
-            $kernel = new $kernelClass($env, $debug);
+            // Mate is dev-only tooling: always boot the host kernel like a local dev session so
+            // APP_ENV/APP_DEBUG from the outer process (e.g. CI or a production shell) cannot
+            // change Symfony behavior. Project secrets and URLs still come from .env via bootEnv().
+            $kernel = new $kernelClass('dev', true);
             if (!$kernel instanceof KernelInterface) {
                 return null;
             }
@@ -136,24 +137,5 @@ final class ApplicationContainerFactory
         }
 
         return trim($value);
-    }
-
-    private static function readEnvBool(string $name, bool $default): bool
-    {
-        $raw = $_SERVER[$name] ?? $_ENV[$name] ?? getenv($name);
-        if (false === $raw || '' === $raw) {
-            return $default;
-        }
-
-        if (\is_bool($raw)) {
-            return $raw;
-        }
-
-        $normalized = filter_var((string) $raw, \FILTER_VALIDATE_BOOLEAN, \FILTER_NULL_ON_FAILURE);
-        if (null !== $normalized) {
-            return $normalized;
-        }
-
-        return $default;
     }
 }

@@ -64,7 +64,6 @@
     "test:local": "vendor/bin/phpunit",
     "test:docker": "bash tests/bin/run-docker-phpunit.sh matrix",
     "coverage": "bash tests/bin/run-docker-coverage.sh",
-    "coverage:local": "XDEBUG_MODE=coverage vendor/bin/phpunit --coverage-text --coverage-html coverage/ --coverage-clover coverage/clover.xml",
     "lint:local": [
       "@composer validate --strict",
       "vendor/bin/rector process --dry-run",

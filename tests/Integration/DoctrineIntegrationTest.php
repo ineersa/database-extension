@@ -12,7 +12,6 @@
 namespace MatesOfMate\DatabaseExtension\Tests\Integration;
 
 use Doctrine\DBAL\Connection;
-use Doctrine\Persistence\ManagerRegistry;
 use HelgeSverre\Toon\Toon;
 use MatesOfMate\DatabaseExtension\Capability\ConnectionResource;
 use MatesOfMate\DatabaseExtension\Capability\DatabaseQueryTool;
@@ -20,6 +19,7 @@ use MatesOfMate\DatabaseExtension\Capability\DatabaseSchemaTool;
 use MatesOfMate\DatabaseExtension\Service\ConnectionResolver;
 use MatesOfMate\DatabaseExtension\Tests\Fixtures\App\TestKernel;
 use MatesOfMate\DatabaseExtension\Tests\Fixtures\Database\DatabaseTestFixtures;
+use MatesOfMate\DatabaseExtension\Tests\Support\RequiresDatabaseEnginesTrait;
 use Mcp\Schema\Content\TextContent;
 use Mcp\Schema\Result\CallToolResult;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -27,6 +27,8 @@ use Symfony\Component\HttpKernel\KernelInterface;
 
 class DoctrineIntegrationTest extends KernelTestCase
 {
+    use RequiresDatabaseEnginesTrait;
+
     public function testRegistersDatabaseCapabilitiesWhenDoctrineBundleIsEnabled(): void
     {
         self::bootKernel();
@@ -83,7 +85,7 @@ class DoctrineIntegrationTest extends KernelTestCase
 
         $testedConnections = 0;
         foreach (['default', 'mysql', 'pgsql'] as $connectionName) {
-            $writableConnection = $this->tryConnect($connectionName);
+            $writableConnection = $this->connectionForMultiEngineLoop($connectionName);
             if (!$writableConnection instanceof Connection) {
                 continue;
             }
@@ -107,7 +109,7 @@ class DoctrineIntegrationTest extends KernelTestCase
             ++$testedConnections;
         }
 
-        $this->assertGreaterThan(0, $testedConnections, 'No reachable test database connection was available.');
+        $this->assertAtLeastOneMultiEngineConnectionTested($testedConnections);
     }
 
     public function testSchemaToolExtractsTablesAndViewsFromRealConnection(): void
@@ -187,31 +189,12 @@ class DoctrineIntegrationTest extends KernelTestCase
 
     private function connectOrSkip(string $connectionName): Connection
     {
-        $connection = $this->tryConnect($connectionName);
+        $connection = $this->tryConnectDoctrineRegistry($connectionName);
         if (!$connection instanceof Connection) {
             $this->markTestSkipped(\sprintf('Connection "%s" is not reachable in this environment.', $connectionName));
         }
 
         return $connection;
-    }
-
-    private function tryConnect(string $connectionName): ?Connection
-    {
-        /** @var ManagerRegistry $registry */
-        $registry = self::getContainer()->get('doctrine');
-
-        try {
-            $resolvedConnection = $registry->getConnection($connectionName);
-            if (!$resolvedConnection instanceof Connection) {
-                return null;
-            }
-
-            $resolvedConnection->executeQuery('SELECT 1')->fetchOne();
-
-            return $resolvedConnection;
-        } catch (\Throwable) {
-            return null;
-        }
     }
 
     /**

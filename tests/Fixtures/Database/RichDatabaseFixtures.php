@@ -1,0 +1,573 @@
+<?php
+
+/*
+ * This file is part of the MatesOfMate Organisation.
+ *
+ * (c) Johannes Wachter <johannes@sulu.io>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
+namespace MatesOfMate\DatabaseExtension\Tests\Fixtures\Database;
+
+use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\DriverManager;
+
+/**
+ * Cross-database schema and seed data for integration tests (ported from mysql-server fixtures).
+ *
+ * @author Johannes Wachter <johannes@sulu.io>
+ */
+class RichDatabaseFixtures
+{
+    public static function setup(Connection $connection): void
+    {
+        $writableConnection = self::createWritableConnection($connection);
+        try {
+            self::setupOnConnection($writableConnection);
+        } finally {
+            $writableConnection->close();
+        }
+    }
+
+    public static function teardown(Connection $connection): void
+    {
+        $writableConnection = self::createWritableConnection($connection);
+        try {
+            self::teardownOnConnection($writableConnection);
+        } finally {
+            $writableConnection->close();
+        }
+    }
+
+    public static function reset(Connection $connection): void
+    {
+        $writableConnection = self::createWritableConnection($connection);
+        try {
+            self::teardownOnConnection($writableConnection);
+            self::setupOnConnection($writableConnection);
+        } finally {
+            $writableConnection->close();
+        }
+    }
+
+    public static function setupSchema(Connection $connection): void
+    {
+        $type = self::detectDatabaseType($connection);
+
+        self::createUsersTable($connection, $type);
+        self::createProductsTable($connection, $type);
+        self::createPiiSamplesTable($connection, $type);
+        self::createExtras($connection, $type);
+    }
+
+    public static function loadFixtures(Connection $connection): void
+    {
+        $type = self::detectDatabaseType($connection);
+
+        $users = self::getExpectedUsers($type);
+        foreach ($users as $user) {
+            $connection->insert('users', $user);
+        }
+
+        $products = self::getExpectedProducts($type);
+        foreach ($products as $product) {
+            $connection->insert('products', $product);
+        }
+
+        $piiSamples = self::getExpectedPiiSamples();
+        foreach ($piiSamples as $sample) {
+            $connection->insert('pii_samples', $sample);
+        }
+    }
+
+    /**
+     * @return array<int, array{id: int, name: string, email: string}>
+     */
+    public static function getExpectedUsers(string $type): array
+    {
+        return match ($type) {
+            'pdo_sqlite' => [
+                ['id' => 1, 'name' => 'Alice', 'email' => 'alice@example.com'],
+                ['id' => 2, 'name' => 'Bob', 'email' => 'bob@example.com'],
+                ['id' => 3, 'name' => 'Charlie', 'email' => 'charlie@example.com'],
+            ],
+            'pdo_mysql' => [
+                ['id' => 1, 'name' => 'Diana', 'email' => 'diana@example.com'],
+                ['id' => 2, 'name' => 'Eve', 'email' => 'eve@example.com'],
+                ['id' => 3, 'name' => 'Frank', 'email' => 'frank@example.com'],
+            ],
+            'pdo_pgsql' => [
+                ['id' => 1, 'name' => 'Grace', 'email' => 'grace@example.com'],
+                ['id' => 2, 'name' => 'Heidi', 'email' => 'heidi@example.com'],
+                ['id' => 3, 'name' => 'Ivan', 'email' => 'ivan@example.com'],
+            ],
+            'pdo_sqlsrv' => [
+                ['id' => 1, 'name' => 'Judy', 'email' => 'judy@example.com'],
+                ['id' => 2, 'name' => 'Karl', 'email' => 'karl@example.com'],
+                ['id' => 3, 'name' => 'Laura', 'email' => 'laura@example.com'],
+            ],
+            default => throw new \RuntimeException(\sprintf('Unknown database type: %s', $type)),
+        };
+    }
+
+    /**
+     * @return array<int, array{id: int, name: string, price: float}>
+     */
+    public static function getExpectedProducts(string $type): array
+    {
+        return match ($type) {
+            'pdo_sqlite' => [
+                ['id' => 1, 'name' => 'Widget-S', 'price' => 19.99],
+                ['id' => 2, 'name' => 'Gadget-S', 'price' => 29.99],
+            ],
+            'pdo_mysql' => [
+                ['id' => 1, 'name' => 'Widget-M', 'price' => 19.99],
+                ['id' => 2, 'name' => 'Gadget-M', 'price' => 29.99],
+            ],
+            'pdo_pgsql' => [
+                ['id' => 1, 'name' => 'Widget-P', 'price' => 19.99],
+                ['id' => 2, 'name' => 'Gadget-P', 'price' => 29.99],
+            ],
+            'pdo_sqlsrv' => [
+                ['id' => 1, 'name' => 'Widget-Q', 'price' => 19.99],
+                ['id' => 2, 'name' => 'Gadget-Q', 'price' => 29.99],
+            ],
+            default => throw new \RuntimeException(\sprintf('Unknown database type: %s', $type)),
+        };
+    }
+
+    /**
+     * Get expected PII sample data for testing.
+     *
+     * @return array<int, array{id: int, customer_name: string, customer_email: string, phone: string, ssn: string, credit_card: string, ip_address: string, notes: string}>
+     */
+    public static function getExpectedPiiSamples(): array
+    {
+        return [
+            [
+                'id' => 1,
+                'customer_name' => 'John Smith',
+                'customer_email' => 'john.smith@example.com',
+                'phone' => '(555) 123-4567',
+                'ssn' => '123-45-6789',
+                'credit_card' => '4532015112830366',
+                'ip_address' => '192.168.1.100',
+                'notes' => 'This is a very long note that should exceed the limit of 200 characters to test the truncation functionality in the QueryTool. We need to make sure that when multiple rows are returned, this text is replaced with a placeholder, but when a single row is returned, the full text is preserved correctly.',
+            ],
+            [
+                'id' => 2,
+                'customer_name' => 'Jane Doe',
+                'customer_email' => 'jane.doe@company.org',
+                'phone' => '+1-555-987-6543',
+                'ssn' => '987-65-4321',
+                'credit_card' => '5425233430109903',
+                'ip_address' => '10.0.0.50',
+                'notes' => 'VIP account holder',
+            ],
+            [
+                'id' => 3,
+                'customer_name' => 'Robert Johnson',
+                'customer_email' => 'rjohnson@email.net',
+                'phone' => '555.456.7890',
+                'ssn' => '456-78-9012',
+                'credit_card' => '374245455400126',
+                'ip_address' => '172.16.0.1',
+                'notes' => 'Prefers email contact',
+            ],
+        ];
+    }
+
+    private static function setupOnConnection(Connection $writableConnection): void
+    {
+        self::setupSchema($writableConnection);
+        self::loadFixtures($writableConnection);
+    }
+
+    private static function teardownOnConnection(Connection $writableConnection): void
+    {
+        $type = self::detectDatabaseType($writableConnection);
+
+        self::dropExtras($writableConnection, $type);
+
+        // Drop tables in reverse order due to potential foreign keys
+        $writableConnection->executeStatement('DROP TABLE IF EXISTS pii_samples');
+        $writableConnection->executeStatement('DROP TABLE IF EXISTS products');
+        $writableConnection->executeStatement('DROP TABLE IF EXISTS users');
+    }
+
+    private static function createWritableConnection(Connection $connection): Connection
+    {
+        $params = $connection->getParams();
+
+        $configuration = clone $connection->getConfiguration();
+        $configuration->setMiddlewares([]);
+
+        return DriverManager::getConnection($params, $configuration);
+    }
+
+    private static function detectDatabaseType(Connection $connection): string
+    {
+        /** @var array{driver?: string, url?: string} $params */
+        $params = $connection->getParams();
+
+        if (isset($params['driver']) && \is_string($params['driver'])) {
+            return $params['driver'];
+        }
+
+        if (isset($params['url']) && \is_string($params['url'])) {
+            if (str_starts_with($params['url'], 'mysql://') || str_starts_with($params['url'], 'pdo-mysql://')) {
+                return 'pdo_mysql';
+            }
+            if (str_starts_with($params['url'], 'postgresql://') || str_starts_with($params['url'], 'postgres://') || str_starts_with($params['url'], 'pdo-pgsql://')) {
+                return 'pdo_pgsql';
+            }
+            if (str_starts_with($params['url'], 'sqlite://') || str_starts_with($params['url'], 'pdo-sqlite://')) {
+                return 'pdo_sqlite';
+            }
+            if (str_starts_with($params['url'], 'sqlsrv://') || str_starts_with($params['url'], 'pdo-sqlsrv://')) {
+                return 'pdo_sqlsrv';
+            }
+        }
+
+        throw new \RuntimeException('Unable to detect database type from connection');
+    }
+
+    private static function createUsersTable(Connection $connection, string $type): void
+    {
+        $sql = match ($type) {
+            'pdo_sqlite' => '
+                CREATE TABLE users (
+                    id INTEGER PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    email TEXT NOT NULL,
+                    age INTEGER CHECK (age >= 0)
+                )
+            ',
+            'pdo_mysql' => '
+                CREATE TABLE users (
+                    id INT PRIMARY KEY,
+                    name VARCHAR(255) NOT NULL,
+                    email VARCHAR(255) NOT NULL,
+                    age INT NULL,
+                    CONSTRAINT chk_users_age CHECK (age >= 0)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            ',
+            'pdo_pgsql' => '
+                CREATE TABLE users (
+                    id INTEGER PRIMARY KEY,
+                    name VARCHAR(255) NOT NULL,
+                    email VARCHAR(255) NOT NULL,
+                    age INTEGER NULL,
+                    CONSTRAINT chk_users_age CHECK (age >= 0)
+                )
+            ',
+            'pdo_sqlsrv' => '
+                CREATE TABLE users (
+                    id INT PRIMARY KEY,
+                    name NVARCHAR(255) NOT NULL,
+                    email NVARCHAR(255) NOT NULL,
+                    age INT NULL,
+                    CONSTRAINT chk_users_age CHECK (age >= 0)
+                )
+            ',
+            default => throw new \RuntimeException(\sprintf('Unknown database type: %s', $type)),
+        };
+
+        $connection->executeStatement($sql);
+    }
+
+    private static function createProductsTable(Connection $connection, string $type): void
+    {
+        $sql = match ($type) {
+            'pdo_sqlite' => '
+                CREATE TABLE products (
+                    id INTEGER PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    price REAL NOT NULL
+                )
+            ',
+            'pdo_mysql' => '
+                CREATE TABLE products (
+                    id INT PRIMARY KEY,
+                    name VARCHAR(255) NOT NULL,
+                    price DECIMAL(10, 2) NOT NULL
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            ',
+            'pdo_pgsql' => '
+                CREATE TABLE products (
+                    id INTEGER PRIMARY KEY,
+                    name VARCHAR(255) NOT NULL,
+                    price NUMERIC(10, 2) NOT NULL
+                )
+            ',
+            'pdo_sqlsrv' => '
+                CREATE TABLE products (
+                    id INT PRIMARY KEY,
+                    name NVARCHAR(255) NOT NULL,
+                    price DECIMAL(10, 2) NOT NULL
+                )
+            ',
+            default => throw new \RuntimeException(\sprintf('Unknown database type: %s', $type)),
+        };
+
+        $connection->executeStatement($sql);
+    }
+
+    private static function createPiiSamplesTable(Connection $connection, string $type): void
+    {
+        $sql = match ($type) {
+            'pdo_sqlite' => '
+                CREATE TABLE pii_samples (
+                    id INTEGER PRIMARY KEY,
+                    customer_name TEXT NOT NULL,
+                    customer_email TEXT NOT NULL,
+                    phone TEXT NOT NULL,
+                    ssn TEXT NOT NULL,
+                    credit_card TEXT NOT NULL,
+                    ip_address TEXT NOT NULL,
+                    notes TEXT NOT NULL
+                )
+            ',
+            'pdo_mysql' => '
+                CREATE TABLE pii_samples (
+                    id INT PRIMARY KEY,
+                    customer_name VARCHAR(255) NOT NULL,
+                    customer_email VARCHAR(255) NOT NULL,
+                    phone VARCHAR(50) NOT NULL,
+                    ssn VARCHAR(20) NOT NULL,
+                    credit_card VARCHAR(20) NOT NULL,
+                    ip_address VARCHAR(45) NOT NULL,
+                    notes TEXT NOT NULL
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            ',
+            'pdo_pgsql' => '
+                CREATE TABLE pii_samples (
+                    id INTEGER PRIMARY KEY,
+                    customer_name VARCHAR(255) NOT NULL,
+                    customer_email VARCHAR(255) NOT NULL,
+                    phone VARCHAR(50) NOT NULL,
+                    ssn VARCHAR(20) NOT NULL,
+                    credit_card VARCHAR(20) NOT NULL,
+                    ip_address VARCHAR(45) NOT NULL,
+                    notes TEXT NOT NULL
+                )
+            ',
+            'pdo_sqlsrv' => '
+                CREATE TABLE pii_samples (
+                    id INT PRIMARY KEY,
+                    customer_name NVARCHAR(255) NOT NULL,
+                    customer_email NVARCHAR(255) NOT NULL,
+                    phone NVARCHAR(50) NOT NULL,
+                    ssn NVARCHAR(20) NOT NULL,
+                    credit_card NVARCHAR(20) NOT NULL,
+                    ip_address NVARCHAR(45) NOT NULL,
+                    notes NVARCHAR(MAX) NOT NULL
+                )
+            ',
+            default => throw new \RuntimeException(\sprintf('Unknown database type: %s', $type)),
+        };
+
+        $connection->executeStatement($sql);
+    }
+
+    private static function createExtras(Connection $connection, string $type): void
+    {
+        match ($type) {
+            'pdo_sqlite' => self::createSqliteExtras($connection),
+            'pdo_mysql' => self::createMysqlExtras($connection),
+            'pdo_pgsql' => self::createPgsqlExtras($connection),
+            'pdo_sqlsrv' => self::createSqlsrvExtras($connection),
+            default => throw new \RuntimeException(\sprintf('Unknown database type: %s', $type)),
+        };
+    }
+
+    private static function dropExtras(Connection $connection, string $type): void
+    {
+        match ($type) {
+            'pdo_sqlite' => self::dropSqliteExtras($connection),
+            'pdo_mysql' => self::dropMysqlExtras($connection),
+            'pdo_pgsql' => self::dropPgsqlExtras($connection),
+            'pdo_sqlsrv' => self::dropSqlsrvExtras($connection),
+            default => throw new \RuntimeException(\sprintf('Unknown database type: %s', $type)),
+        };
+    }
+
+    private static function createSqliteExtras(Connection $connection): void
+    {
+        // View: active_users
+        $connection->executeStatement('
+            CREATE VIEW IF NOT EXISTS active_users AS
+            SELECT id, name, email FROM users WHERE name != \'\'
+        ');
+
+        // Trigger: log insert on users (SQLite has no stored procs/functions)
+        $connection->executeStatement('
+            CREATE TRIGGER IF NOT EXISTS trg_users_insert
+            AFTER INSERT ON users
+            BEGIN
+                SELECT 1;
+            END
+        ');
+    }
+
+    private static function dropSqliteExtras(Connection $connection): void
+    {
+        $connection->executeStatement('DROP TRIGGER IF EXISTS trg_users_insert');
+        $connection->executeStatement('DROP VIEW IF EXISTS active_users');
+    }
+
+    private static function createMysqlExtras(Connection $connection): void
+    {
+        // View: active_users
+        $connection->executeStatement('
+            CREATE OR REPLACE VIEW active_users AS
+            SELECT id, name, email FROM users WHERE name != \'\'
+        ');
+
+        // Stored procedure: get_user_count
+        $connection->executeStatement('
+            CREATE PROCEDURE get_user_count(OUT cnt INT)
+            BEGIN
+                SELECT COUNT(*) INTO cnt FROM users;
+            END
+        ');
+
+        // Trigger: trg_users_insert
+        $connection->executeStatement('
+            CREATE TRIGGER trg_users_insert
+            AFTER INSERT ON users
+            FOR EACH ROW
+            BEGIN
+                SET @last_user_id = NEW.id;
+            END
+        ');
+
+        // Function: exercises MySQL SHOW FUNCTION STATUS / SHOW CREATE FUNCTION in schema tools
+        $connection->executeStatement('
+            CREATE FUNCTION fixture_schema_double(p INT)
+            RETURNS INT
+            DETERMINISTIC
+            NO SQL
+            RETURN p * 2;
+        ');
+    }
+
+    private static function dropMysqlExtras(Connection $connection): void
+    {
+        $connection->executeStatement('DROP TRIGGER IF EXISTS trg_users_insert');
+        $connection->executeStatement('DROP FUNCTION IF EXISTS fixture_schema_double');
+        $connection->executeStatement('DROP PROCEDURE IF EXISTS get_user_count');
+        $connection->executeStatement('DROP VIEW IF EXISTS active_users');
+    }
+
+    private static function createPgsqlExtras(Connection $connection): void
+    {
+        // View: active_users
+        $connection->executeStatement('
+            CREATE OR REPLACE VIEW active_users AS
+            SELECT id, name, email FROM users WHERE name != \'\'
+        ');
+
+        // Function: get_user_count
+        $connection->executeStatement('
+            CREATE OR REPLACE FUNCTION get_user_count()
+            RETURNS INTEGER AS $$
+            BEGIN
+                RETURN (SELECT COUNT(*) FROM users);
+            END;
+            $$ LANGUAGE plpgsql
+        ');
+
+        // Trigger function + trigger: trg_users_insert
+        $connection->executeStatement('
+            CREATE OR REPLACE FUNCTION trg_users_insert_fn()
+            RETURNS trigger AS $$
+            BEGIN
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql
+        ');
+
+        $connection->executeStatement('
+            CREATE TRIGGER trg_users_insert
+            AFTER INSERT ON users
+            FOR EACH ROW EXECUTE FUNCTION trg_users_insert_fn()
+        ');
+
+        // Sequence: order_seq
+        $connection->executeStatement('
+            CREATE SEQUENCE IF NOT EXISTS order_seq START 1000 INCREMENT 10
+        ');
+
+        // Procedure: exercises PostgreSQL pg_proc prokind = p and pg_get_functiondef in schema tools
+        $connection->executeStatement('
+            CREATE OR REPLACE PROCEDURE fixture_schema_noop()
+            LANGUAGE plpgsql
+            AS $$
+            BEGIN
+                NULL;
+            END;
+            $$
+        ');
+    }
+
+    private static function dropPgsqlExtras(Connection $connection): void
+    {
+        $connection->executeStatement('DROP TRIGGER IF EXISTS trg_users_insert ON users');
+        $connection->executeStatement('DROP FUNCTION IF EXISTS trg_users_insert_fn()');
+        $connection->executeStatement('DROP PROCEDURE IF EXISTS fixture_schema_noop()');
+        $connection->executeStatement('DROP FUNCTION IF EXISTS get_user_count()');
+        $connection->executeStatement('DROP SEQUENCE IF EXISTS order_seq');
+        $connection->executeStatement('DROP VIEW IF EXISTS active_users');
+    }
+
+    private static function createSqlsrvExtras(Connection $connection): void
+    {
+        // View: active_users
+        $connection->executeStatement('
+            CREATE OR ALTER VIEW active_users AS
+            SELECT id, name, email FROM users WHERE name != \'\'
+        ');
+
+        // Stored procedure: get_user_count
+        $connection->executeStatement('
+            CREATE OR ALTER PROCEDURE get_user_count
+                @cnt INT OUTPUT
+            AS
+            BEGIN
+                SELECT @cnt = COUNT(*) FROM users;
+            END
+        ');
+
+        // Scalar function: double_price
+        $connection->executeStatement('
+            CREATE OR ALTER FUNCTION double_price(@p DECIMAL(10,2))
+            RETURNS DECIMAL(10,2)
+            AS
+            BEGIN
+                RETURN @p * 2;
+            END
+        ');
+
+        // Trigger: trg_users_insert
+        $connection->executeStatement('
+            CREATE OR ALTER TRIGGER trg_users_insert
+            ON users
+            AFTER INSERT
+            AS
+            BEGIN
+                SET NOCOUNT ON;
+            END
+        ');
+    }
+
+    private static function dropSqlsrvExtras(Connection $connection): void
+    {
+        $connection->executeStatement("IF OBJECT_ID('trg_users_insert', 'TR') IS NOT NULL DROP TRIGGER trg_users_insert");
+        $connection->executeStatement("IF OBJECT_ID('double_price', 'FN') IS NOT NULL DROP FUNCTION double_price");
+        $connection->executeStatement("IF OBJECT_ID('get_user_count', 'P') IS NOT NULL DROP PROCEDURE get_user_count");
+        $connection->executeStatement("IF OBJECT_ID('active_users', 'V') IS NOT NULL DROP VIEW active_users");
+    }
+}

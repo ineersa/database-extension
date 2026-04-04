@@ -13,8 +13,8 @@ trap cleanup EXIT
 mkdir -p coverage
 
 docker compose -f "${COMPOSE_FILE}" up -d mysql postgres
-docker compose -f "${COMPOSE_FILE}" build php82-sf73
+docker compose -f "${COMPOSE_FILE}" build php84-sf80
 docker compose -f "${COMPOSE_FILE}" run --rm \
     -e RUN_COMMAND=coverage \
     -e COVERAGE_OUTPUT_DIR=/app/coverage \
-    php82-sf73
+    php84-sf80

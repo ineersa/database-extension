@@ -134,7 +134,6 @@ Last updated: 2026-04-03
     - `tests/bin/run-docker-quality.sh`
   - Added local-only convenience scripts:
     - `composer test:local`
-    - `composer coverage:local`
     - `composer lint:local`
     - `composer fix:local`
     - `composer lint:php82`
