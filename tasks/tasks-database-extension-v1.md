@@ -73,8 +73,8 @@ Update the file after completing each sub-task, not just after completing an ent
   - [x] 5.2 Add or update test scripts so local and CI execution both use the Docker-backed PHPUnit flow.
   - [x] 5.3 Update `.github/workflows/ci.yml` to boot the Docker test stack and run the full PHPUnit suite.
   - [x] 5.4 Verify that the planned dependency ranges remain aligned with the DBAL 4-first implementation target.
-- [ ] 6.0 Rewrite developer-facing documentation and Mate instructions for the final v1 behavior
-  - [ ] 6.1 Rewrite `README.md` to describe the actual extension capabilities, DoctrineBundle assumptions, supported databases, and read-only guarantees.
-  - [ ] 6.2 Rewrite `INSTRUCTIONS.md` to contain the schema-first workflow guidance, row-limit defaults, and dialect-specific reminders moved out of capability descriptions.
-  - [ ] 6.3 Document the reduced v1 scope clearly, including the single summary resource and the absence of PII support.
-  - [ ] 6.4 Document the Docker-based test workflow so contributors know how to run the full suite locally.
+- [x] 6.0 Rewrite developer-facing documentation and Mate instructions for the final v1 behavior
+  - [x] 6.1 Rewrite `README.md` to describe the actual extension capabilities, DoctrineBundle assumptions, supported databases, and read-only guarantees.
+  - [x] 6.2 Rewrite `INSTRUCTIONS.md` to contain the schema-first workflow guidance, row-limit defaults, and dialect-specific reminders moved out of capability descriptions.
+  - [x] 6.3 Document the reduced v1 scope clearly, including the single summary resource and the absence of PII support.
+  - [x] 6.4 Document the Docker-based test workflow so contributors know how to run the full suite locally.

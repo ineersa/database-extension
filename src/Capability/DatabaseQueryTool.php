@@ -22,11 +22,17 @@ use Mcp\Schema\Result\CallToolResult;
 class DatabaseQueryTool
 {
     private const DESCRIPTION = <<<DESCRIPTION
-Run read-only SQL queries for debugging and data inspection.
-Available connections:
-- default: the Doctrine DBAL default connection
-- any configured Doctrine DBAL named connection
-If `connection` is omitted, the default connection is used.
+Runs read-only SQL queries against a Doctrine DBAL connection.
+Only SELECT and WITH (CTE) queries are allowed. Writes, DDL, and transaction control are blocked.
+One statement per call — semicolons are rejected; split into separate calls.
+
+ROW LIMIT: SELECT without WHERE must include LIMIT 10. Always default to LIMIT 10.
+Large text columns (>200 chars) are truncated to "<TEXT>" in multi-row results. To see full text, query must return exactly 1 row.
+Aggregates without GROUP BY (e.g. SELECT COUNT(*)) are exempt from the LIMIT requirement.
+
+Before writing SQL, use database-schema to discover table/column names and avoid errors.
+Connection names come from the application's Doctrine DBAL configuration.
+If `connection` is omitted, the default Doctrine DBAL connection is used.
 DESCRIPTION;
 
     public function __construct(

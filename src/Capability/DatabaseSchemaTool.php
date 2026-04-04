@@ -24,11 +24,22 @@ use Mcp\Schema\Result\CallToolResult;
 class DatabaseSchemaTool
 {
     private const DESCRIPTION = <<<DESCRIPTION
-Inspect database schema objects in summary, columns, or full detail.
-Available connections:
-- default: the Doctrine DBAL default connection
-- any configured Doctrine DBAL named connection
-If `connection` is omitted, the default connection is used.
+Inspect schema for a Doctrine DBAL connection.
+Prefer this over raw information_schema/system catalog queries for metadata and definitions.
+
+Detail levels:
+- summary (default): matching table/view names only.
+- columns: tables with column names, types, nullability, defaults.
+- full: columns plus indexes, foreign keys, constraints, trigger and routine definitions.
+
+Include flags:
+- includeViews=true adds view names (summary/columns) or view SQL definitions (full).
+- includeRoutines=true adds procedures, functions, sequences, trigger names (summary/columns) or their definitions (full).
+
+Use detail="columns" or detail="full" with a narrow filter whenever possible.
+filter matches object names; omit or use filter="" to include all objects.
+Connection names come from the application's Doctrine DBAL configuration.
+If `connection` is omitted, the default Doctrine DBAL connection is used.
 DESCRIPTION;
 
     public function __construct(

@@ -1,6 +1,6 @@
 # Database Extension V1 Progress
 
-Last updated: 2026-03-31
+Last updated: 2026-04-03
 
 ## Current Status
 
@@ -14,6 +14,8 @@ Last updated: 2026-03-31
 - Subtasks `4.1` through `4.7` are complete and checked in `tasks/tasks-database-extension-v1.md`.
 - Task `5.0 Update package dependencies, CI, and test tooling for the new extension architecture` is complete.
 - Subtasks `5.1` through `5.4` are complete and checked in `tasks/tasks-database-extension-v1.md`.
+- Task `6.0 Rewrite developer-facing documentation and Mate instructions for the final v1 behavior` is complete.
+- Subtasks `6.1` through `6.4` are complete and checked in `tasks/tasks-database-extension-v1.md`.
 
 ## What Was Completed
 
@@ -169,6 +171,28 @@ Last updated: 2026-03-31
 
 - TOON output now uses `HelgeSverre\Toon\Toon::encode()` directly.
 - No custom `ToonEncoder` implementation is used.
+
+## Task 6 Completed Work
+
+- Rewrote `README.md` with v1-accurate documentation:
+  - Capability table listing `database-query`, `database-schema`, and `db://{connection}`.
+  - DoctrineBundle integration assumptions and automatic detection behavior.
+  - Supported databases (MySQL, PostgreSQL, SQLite) and version requirements.
+  - Read-only safety documentation covering both driver-level middleware and defensive query validation.
+  - Full tool parameter reference with types, defaults, and descriptions.
+  - V1 scope section documenting single summary resource and absence of PII support.
+  - Architecture diagram showing data flow from capabilities through services to DoctrineBundle.
+  - Docker-based test workflow for contributors with all available commands.
+  - CI matrix documentation.
+- Rewrote `INSTRUCTIONS.md` as the Mate-facing usage guide:
+  - Schema-first workflow (discover → inspect → query).
+  - Query rules covering allowed statements, LIMIT requirements, and blocked operations.
+  - Row limit guidance and `<TEXT>` truncation behavior.
+  - Schema inspection detail levels and filtering options.
+  - SQL dialect reminders for MySQL, PostgreSQL, and SQLite.
+  - Connection selection guidance.
+  - Structured error handling explanation.
+- Removed template/placeholder content from both files.
 
 ## Validation
 

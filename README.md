@@ -1,223 +1,180 @@
 # Database Extension for Symfony AI Mate
 
-[MatesOfMate](https://github.com/matesofmate) extension that adds MCP (Model Context Protocol) tools and resources for database-related workflows in Symfony AI Mate.
+Safe, read-only database access for AI assistants running inside [Symfony AI Mate](https://symfony.com/doc/current/ai/components/mate.html). Connects through your application's existing [DoctrineBundle](https://github.com/doctrine/DoctrineBundle) DBAL configuration — no standalone MCP server or custom database config required.
 
-Generic fork/customization instructions for new extensions live in [TEMPLATE.md](TEMPLATE.md) (copied from the original template).
+## Capabilities
 
-## Quick Start
+| Capability | Type | Description |
+|---|---|---|
+| `database-query` | Tool | Run validated read-only SQL queries for debugging and data inspection |
+| `database-schema` | Tool | Inspect schema objects in summary, columns, or full detail |
+| `db://{connection}` | Resource | Discovery summary for one connection: tables, views, routines, and metadata |
 
-1. **Install**: `composer require --dev matesofmate/database-extension`
-2. **Discover tools**: `vendor/bin/mate discover`
-3. **Develop**: Add tools in `src/Capability/` and register them in `config/config.php`
-4. **Test**: `composer test`
-5. **Quality**: `composer lint`
+All capabilities use the host application's Doctrine DBAL connections. When `connection` is omitted, the default Doctrine connection is used automatically.
 
-## Structure
+## Supported Databases
 
-```
-database-extension/
-├── .github/
-│   ├── workflows/
-│   │   └── ci.yml             # GitHub Actions workflow
-│   ├── ISSUE_TEMPLATE/
-│   │   ├── 1-bug_report.md
-│   │   ├── 2-feature_request.md
-│   │   └── config.yml
-│   ├── CODEOWNERS
-│   └── PULL_REQUEST_TEMPLATE.md
-├── composer.json
-├── README.md                  # This file
-├── TEMPLATE.md                # Generic extension template documentation
-├── LICENSE
-├── .gitignore
-├── phpunit.xml.dist
-├── phpstan.dist.neon
-├── rector.php
-├── .php-cs-fixer.php
-├── src/
-│   └── Capability/
-│       ├── DatabaseTool.php    # Sample tool implementation
-│       └── DatabaseResource.php # Sample resource implementation
-├── config/
-│   └── config.php             # Service registration
-└── tests/
-    └── Capability/
-        ├── DatabaseToolTest.php
-        └── DatabaseResourceTest.php
-```
+- **MySQL** 8.0+
+- **PostgreSQL** 16+
+- **SQLite** 3+
+
+## Requirements
+
+- PHP 8.2+
+- Symfony 7.3+ or 8.0+
+- Doctrine DBAL 4.0+
+- DoctrineBundle 2.14+ (must be installed and configured in the host application)
 
 ## Installation
 
 ```bash
 composer require --dev matesofmate/database-extension
 
-# Discover the new tools
+# Discover the new capabilities
 vendor/bin/mate discover
 ```
 
-## Creating Tools
+The extension detects DoctrineBundle automatically. If DoctrineBundle is not installed or configured, no database capabilities are exposed — the extension stays silent rather than offering broken tools.
 
-Tools are PHP classes with methods marked with the `#[McpTool]` attribute:
+## Read-Only Safety
 
-```php
-<?php
+Query execution is protected by two independent layers:
 
-namespace MatesOfMate\DatabaseExtension\Capability;
+1. **Driver-level read-only mode** — A DBAL middleware sets the database session to read-only (`SET SESSION transaction_read_only = 1` on MySQL, `SET default_transaction_read_only = on` on PostgreSQL, `PRAGMA query_only = ON` on SQLite) before any query runs.
+2. **Defensive query validation** — Before execution, every query is checked for:
+   - Write keywords (`INSERT`, `UPDATE`, `DELETE`, `DROP`, `ALTER`, `CREATE`, `TRUNCATE`, etc.)
+   - Transaction control (`COMMIT`, `ROLLBACK`, `TRANSACTION`)
+   - Multiple statements (semicolon-separated)
+   - Unbounded `SELECT` without `WHERE` or `LIMIT`
 
-use Mcp\Capability\Attribute\McpTool;
+All queries execute inside a transaction that is always rolled back, regardless of outcome.
 
-final class ListEntitiesTool
-{
-    public function __construct(
-        private readonly SomeService $service,
-    ) {
-    }
+## Tool Reference
 
-    #[McpTool(
-        name: 'database-list-entities',
-        description: 'Lists all entities in the application. Use when the user asks about available entities, models, or database tables.'
-    )]
-    public function execute(): string
-    {
-        $entities = $this->service->getEntities();
+### `database-query`
 
-        return json_encode([
-            'entities' => $entities,
-            'count' => count($entities),
-        ], \JSON_THROW_ON_ERROR | \JSON_PRETTY_PRINT);
-    }
-}
+Run a read-only SQL query against a Doctrine DBAL connection.
+
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `query` | string | yes | — | SQL query to validate and execute |
+| `connection` | string | no | default connection | Doctrine DBAL connection name |
+
+Returns query result rows in TOON format. Long text values (>200 characters) are truncated to `<TEXT>` in multi-row results to reduce token usage.
+
+### `database-schema`
+
+Inspect database schema objects with configurable detail and filtering.
+
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `connection` | string | no | default connection | Doctrine DBAL connection name |
+| `filter` | string | no | `""` | Object name filter |
+| `detail` | string | no | `summary` | Detail level: `summary`, `columns`, `full` |
+| `matchMode` | string | no | `contains` | Filter matching: `contains`, `prefix`, `exact`, `glob` |
+| `includeViews` | bool | no | `false` | Include views in the response |
+| `includeRoutines` | bool | no | `false` | Include procedures/functions/sequences/triggers |
+
+### `db://{connection}`
+
+Resource template returning a discovery summary for a single connection. Includes connection metadata (driver, platform, server version), table names, view names, and routine names.
+
+## V1 Scope
+
+This is the initial release. The following limitations apply:
+
+- **Single summary resource** — One `db://{connection}` resource per connection. Per-table, per-view, or per-routine resources are not included.
+- **No PII redaction** — Query results are returned as-is. Sensitive data filtering is not implemented.
+- **Doctrine-only** — All database access goes through DoctrineBundle DBAL. There is no custom or standalone connection path.
+- **MySQL, PostgreSQL, SQLite** — Other engines supported by Doctrine DBAL may work but are not tested.
+
+## How It Works
+
+```
+┌──────────────┐      ┌────────────────────┐      ┌──────────────────┐
+│  Mate AI     │─────▶│  DatabaseQueryTool  │─────▶│ SafeQueryExecutor│
+│  Assistant   │      │  DatabaseSchemaTool │      │ DatabaseSchema   │
+│              │      │  ConnectionResource │      │  Service         │
+└──────────────┘      └────────────────────┘      └──────────────────┘
+                              │                           │
+                              ▼                           ▼
+                      ┌────────────────┐          ┌──────────────────┐
+                      │ Connection     │─────────▶│ ReadOnly         │
+                      │  Resolver      │          │  Middleware       │
+                      └────────────────┘          └──────────────────┘
+                              │                           │
+                              ▼                           ▼
+                      ┌────────────────────────────────────────────┐
+                      │     DoctrineBundle DBAL Connections         │
+                      │     (MySQL · PostgreSQL · SQLite)           │
+                      └────────────────────────────────────────────┘
 ```
 
-### Tool Tips
+The extension reads connection names and metadata from DoctrineBundle's service layer. Resolved connections are rebuilt through the read-only DBAL middleware before any query or schema operation executes.
 
-- **name**: Use `{framework}-{action}` format, lowercase with hyphens (e.g. `database-…`)
-- **description**: Be specific so the model knows when to call the tool
-- **Return**: JSON strings work well for structured data
-- **Dependencies**: Constructor injection; wire in `config/config.php`
+## Contributing
 
-## Creating Resources
+### Running Tests
 
-Resources provide static context or configuration data to the AI. They return structured data with a URI, MIME type, and content:
-
-```php
-<?php
-
-namespace MatesOfMate\DatabaseExtension\Capability;
-
-use Mcp\Capability\Attribute\McpResource;
-
-final class ConfigurationResource
-{
-    #[McpResource(
-        uri: 'database://config',
-        name: 'database_config',
-        mimeType: 'application/json'
-    )]
-    public function getConfiguration(): array
-    {
-        return [
-            'uri' => 'database://config',
-            'mimeType' => 'application/json',
-            'text' => json_encode([
-                'version' => '1.0.0',
-                'features' => ['feature_a' => true],
-            ], \JSON_THROW_ON_ERROR | \JSON_PRETTY_PRINT),
-        ];
-    }
-}
-```
-
-### Resource Tips
-
-- **uri**: Custom scheme (e.g. `database://config`, `database://schema`)
-- **name**: Descriptive resource identifier
-- **mimeType**: Usually `application/json` or `text/plain`
-- **Return structure**: Must include `uri`, `mimeType`, and `text` keys
-
-## Registering Services
-
-In `config/config.php`:
-
-```php
-<?php
-
-use MatesOfMate\DatabaseExtension\Capability\ListEntitiesTool;
-use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
-
-return static function (ContainerConfigurator $container): void {
-    $services = $container->services()
-        ->defaults()
-        ->autowire()
-        ->autoconfigure();
-
-    $services->set(ListEntitiesTool::class);
-};
-```
-
-## Testing & Code Quality
+Tests run inside Docker containers against real MySQL, PostgreSQL, and SQLite databases. Docker and Docker Compose are the only host-level requirements.
 
 ```bash
-# Run tests
+# Run the default test suite (PHP 8.2 / Symfony ^7.3)
 composer test
 
-# With coverage
-composer test -- --coverage-html coverage/
+# Run the full matrix (PHP 8.2/Symfony ^7.3, PHP 8.3/Symfony ^7.3, PHP 8.4/Symfony ^8.0)
+composer test:docker
 
-# Check code style and static analysis
+# Run a single matrix entry
+bash tests/bin/run-docker-phpunit.sh php82
+bash tests/bin/run-docker-phpunit.sh php83
+bash tests/bin/run-docker-phpunit.sh php84
+```
+
+The Docker Compose stack (`docker-compose.test.yaml`) starts MySQL 8.0, PostgreSQL 16, and an appropriately versioned PHP container. Database services start with health checks; tests begin only after the databases are ready.
+
+### Code Quality
+
+```bash
+# Lint (runs in PHP 8.2 Docker container)
 composer lint
 
-# Auto-fix code style and apply automated refactorings
+# Auto-fix code style and refactorings
 composer fix
 ```
 
-### Individual Tools
+Local-only variants that skip Docker are available for faster iteration:
 
 ```bash
-# PHP CS Fixer only
-vendor/bin/php-cs-fixer fix --dry-run --diff
-vendor/bin/php-cs-fixer fix
-
-# PHPStan only
-vendor/bin/phpstan analyse
-
-# Rector only
-vendor/bin/rector process --dry-run
-vendor/bin/rector process
+composer lint:local    # Runs Rector, PHP CS Fixer, PHPStan on host PHP
+composer fix:local     # Applies Rector and PHP CS Fixer fixes on host PHP
+composer test:local    # Runs PHPUnit on host PHP (requires local database setup)
+composer coverage:local
 ```
 
-### Continuous Integration
+### Coverage
 
-GitHub Actions runs on push and pull request:
+```bash
+# Generate coverage reports (HTML + Clover) in coverage/
+composer coverage
+```
 
-- **Lint job**: Validates `composer.json`, Rector, PHP CS Fixer, PHPStan
-- **Test job**: PHPUnit on PHP 8.2 and 8.3
+### CI
 
-Configured in `.github/workflows/ci.yml`.
+GitHub Actions runs on every push and pull request:
 
-### GitHub Templates
+- **Lint** — `composer lint` (PHP 8.2 Docker container)
+- **Test matrix** — PHP 8.2/Symfony ^7.3, PHP 8.3/Symfony ^7.3, PHP 8.4/Symfony ^8.0
 
-- **CODEOWNERS**: Code ownership (update with your GitHub username)
-- **PULL_REQUEST_TEMPLATE.md**: PR format
-- **Issue templates**: Bug reports and feature requests
-
-## Checklist Before Publishing
-
-- [x] Replace template `example` / `ExampleExtension` naming with `database` / `DatabaseExtension`
-- [ ] Keep `composer.json` package name and description accurate as features grow
-- [ ] Update `.github/CODEOWNERS` with maintainers
-- [ ] Write meaningful tool descriptions
-- [ ] Keep installation and usage documented in this README
-- [ ] Add tests for new tools and resources
-- [ ] Update LICENSE name/org if needed
-- [ ] Tag releases (e.g. `v0.1.0`) and publish to Packagist
+See `.github/workflows/ci.yml`.
 
 ## Resources
 
 - [Symfony AI Mate Docs](https://symfony.com/doc/current/ai/components/mate.html)
 - [Creating MCP Extensions](https://symfony.com/doc/current/ai/components/mate/extensions.html)
 - [MatesOfMate Contributing Guide](https://github.com/matesofmate/.github/blob/main/CONTRIBUTING.md)
+- [Extension template documentation](TEMPLATE.md)
 
----
+## License
 
-*"Because every Mate needs Mates"*
+MIT — see [LICENSE](LICENSE).
