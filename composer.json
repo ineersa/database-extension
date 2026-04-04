@@ -1,5 +1,5 @@
 {
-  "name": "matesofmate/database-extension",
+  "name": "ineersa/database-extension",
   "description": "Database extension for Symfony AI Mate — MCP tools and resources for database workflows",
   "type": "symfony-ai-mate",
   "license": "MIT",
