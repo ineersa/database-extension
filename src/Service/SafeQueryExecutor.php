@@ -18,7 +18,7 @@ use MatesOfMate\DatabaseExtension\Exception\ToolUsageError;
 class SafeQueryExecutor
 {
     /**
-     * Allowed first tokens for read-only execution (Laravel Boost database-query parity).
+     * Allowed first tokens for read-only execution (taken from Laravel Boost).
      *
      * @var list<string>
      */
