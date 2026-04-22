@@ -455,7 +455,6 @@ class DatabaseCapabilitiesIntegrationTest extends KernelTestCase
         $this->assertCount(1, $result->content);
         $this->assertInstanceOf(TextContent::class, $result->content[0]);
 
-        /** @var TextContent $content */
         $content = $result->content[0];
 
         $decoded = Toon::decode((string) $content->text);
