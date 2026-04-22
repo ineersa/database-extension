@@ -1,6 +1,6 @@
 {
   "name": "ineersa/database-extension",
-  "description": "Database extension for Symfony AI Mate — MCP tools and resources for database workflows",
+  "description": "Database extension for Symfony AI Mate - MCP tools and resources for database workflows",
   "type": "symfony-ai-mate",
   "license": "MIT",
   "keywords": [
@@ -20,7 +20,7 @@
     "php": ">=8.2",
     "ext-simplexml": "*",
     "doctrine/dbal": "^4.0",
-    "symfony/ai-mate": "^0.3 || ^0.4 || ^0.5 || ^0.6@dev"
+    "symfony/ai-mate": "^0.3 || ^0.4 || ^0.5 || ^0.6 || ^0.7 || ^0.8"
   },
   "suggest": {
     "doctrine/doctrine-bundle": "Required for database capability exposure via DoctrineBundle DBAL connections (^2.14)"

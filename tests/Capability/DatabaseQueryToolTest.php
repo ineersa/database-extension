@@ -72,7 +72,6 @@ class DatabaseQueryToolTest extends TestCase
         $this->assertCount(1, $result->content);
         $this->assertInstanceOf(TextContent::class, $result->content[0]);
 
-        /** @var TextContent $content */
         $content = $result->content[0];
         $payload = (string) $content->text;
         $this->assertStringContainsString('johannes@sulu.io', $payload);
@@ -110,7 +109,6 @@ class DatabaseQueryToolTest extends TestCase
         $this->assertCount(1, $result->content);
         $this->assertInstanceOf(TextContent::class, $result->content[0]);
 
-        /** @var TextContent $content */
         $content = $result->content[0];
         $payload = (string) $content->text;
         $this->assertStringContainsString('error:', $payload);
